@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:id="@+id/nav"
+        android:layout_width="150dp"
+        android:layout_height="match_parent"
+        android:background="@color/surface"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginBottom="22dp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.02"
+            android:text="KICK"
+            android:textColor="@color/kick_green"
+            android:textSize="26sp" />
+
+        <TextView android:id="@+id/navHome" style="@style/NavItem" android:drawableStart="@drawable/ic_home" android:text="Home" />
+        <TextView android:id="@+id/navFollowing" style="@style/NavItem" android:drawableStart="@drawable/ic_heart" android:text="Following" />
+        <TextView android:id="@+id/navBrowse" style="@style/NavItem" android:drawableStart="@drawable/ic_grid" android:text="Browse" />
+        <TextView android:id="@+id/navSearch" style="@style/NavItem" android:drawableStart="@drawable/ic_search" android:text="Search" />
+        <TextView android:id="@+id/navSettings" style="@style/NavItem" android:drawableStart="@drawable/ic_tune" android:text="Settings" />
+    </LinearLayout>
+
+    <com.kicktv.app.ui.ContentFrame
+        android:id="@+id/content"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1" />
+</LinearLayout>

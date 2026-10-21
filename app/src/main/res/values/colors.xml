@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="kick_green">#53FC18</color>
+    <color name="kick_green_dim">#3BB811</color>
+    <color name="bg">#0B0E0F</color>
+    <color name="surface">#16191C</color>
+    <color name="surface2">#24272C</color>
+    <color name="surface3">#2F3238</color>
+    <color name="text_primary">#EFEFF1</color>
+    <color name="text_secondary">#A9ADB4</color>
+    <color name="live_red">#E91916</color>
+    <color name="chat_bg">#E6111316</color>
+    <color name="chat_overlay_bg">#99000000</color>
+</resources>
