@@ -37,7 +37,7 @@ class UpdateFlow(private val act: FragmentActivity, private val release: Updater
     private fun startDownload() {
         progress = 0
         error = null
-        sheet.push(OptionSheet.Page("Downloading", eyebrow = "Kick TV ${release.version}") {
+        sheet.push(OptionSheet.Page("Update", eyebrow = "Kick TV ${release.version}") {
             when {
                 error != null -> listOf(
                     OptionSheet.Item("Try again", sub = error, icon = R.drawable.ic_refresh) { it.back(); startDownload() },
@@ -60,12 +60,12 @@ class UpdateFlow(private val act: FragmentActivity, private val release: Updater
 
     private fun installItems(): List<OptionSheet.Item> {
         if (Updater.canInstall(act)) {
-            return listOf(OptionSheet.Item("Install update", icon = R.drawable.ic_check) { install() })
+            return listOf(OptionSheet.Item("Install update", sub = "Ready to install", icon = R.drawable.ic_check) { install() })
         }
         return listOf(
             OptionSheet.Item(
                 "Allow Kick TV to install updates",
-                sub = "Then come back and choose Install.",
+                sub = "Downloaded. Allow installs, then come back and choose Install.",
                 icon = R.drawable.ic_settings,
             ) {
                 if (!Updater.openInstallPermission(act)) {
