@@ -3,6 +3,11 @@
 All notable changes to Sidekick. Each version's notes are also on its
 [GitHub release](https://github.com/DIRIKtv/sidekick/releases).
 
+## 1.3.2 · October 23, 2026
+
+### <img src="docs/icons/improved.png" width="20" height="22" align="top"> Improved
+- **New logo:** a refreshed Sidekick logo on the launcher icon, TV banner, splash screen and sign-in screen
+
 ## 1.3.1 · October 23, 2026
 
 ### <img src="docs/icons/fixed.png" width="20" height="22" align="top"> Fixed
