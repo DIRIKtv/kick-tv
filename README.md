@@ -20,8 +20,21 @@
   <img src="docs/screenshots/home.png" alt="Home screen" width="49%">
   <img src="docs/screenshots/player.png" alt="Live stream with chat" width="49%">
   <img src="docs/screenshots/multiview.png" alt="Multi-view" width="49%">
-  <img src="docs/screenshots/following.png" alt="Following" width="49%">
+  <img src="docs/screenshots/player-settings.png" alt="Player settings" width="49%">
 </p>
+
+<details>
+<summary>More screenshots</summary>
+<p align="center">
+  <img src="docs/screenshots/browse.png" alt="Browse categories" width="49%">
+  <img src="docs/screenshots/category.png" alt="Category" width="49%">
+  <img src="docs/screenshots/channel.png" alt="Channel page with past broadcasts" width="49%">
+  <img src="docs/screenshots/clips.png" alt="Top clips on Home" width="49%">
+  <img src="docs/screenshots/search.png" alt="Search" width="49%">
+  <img src="docs/screenshots/settings.png" alt="Settings" width="49%">
+  <img src="docs/screenshots/sign-in.png" alt="Sign in with your phone" width="49%">
+</p>
+</details>
 
 ## Features
 
