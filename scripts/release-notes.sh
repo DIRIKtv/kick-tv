@@ -22,7 +22,7 @@ $section
 
 ---
 
-### 📺 Install or update
+### Install or update
 
 **Already have Sidekick?** It offers this update the next time you open it, or go to **Settings → Check for updates**.
 

@@ -8,16 +8,16 @@ class ReleaseNotesTest {
     @Test
     fun formattedNotesBecomePlainBullets() {
         val md = """
-            ### ✨ New
+            ### New
             - **Automatic updates setting:** check every time the app opens
             - **About screen** with [privacy](https://example.com) details
 
-            ### 🐞 Fixed
+            ### Fixed
             - **Stuck side menu:** focus no longer bounces back to Home
 
             ---
 
-            ### 📺 Install or update
+            ### Install or update
             - this footer bullet must not show
             ```
             https://github.com/DIRIKtv/sidekick/releases/latest/download/Sidekick.apk
