@@ -187,7 +187,7 @@ h1{font-size:22px;margin:18px 0 4px}p{color:var(--t2);margin:0 0 20px}
 @keyframes run{from{stroke-dashoffset:.3}to{stroke-dashoffset:-1}}
 @media (prefers-reduced-motion:reduce){.shm::before,.fld input:focus~label span,.pay[data-phase=busy] .run{animation:none}.fld label,.gap,.go,.fold{transition-duration:.16s}}
 </style></head><body><div class="wrap">
-<div class="logo">KICK</div>
+<div class="logo">Sidekick</div>
 <div id="v-form"><h1>Sign in on your TV</h1><p>Type your Kick login here and your TV signs in.</p></div>
 <div id="v-code" class="hide"><h1>Check your email</h1><p id="codemsg">Kick sent you a verification code. Enter it here.</p></div>
 <div id="st" class="status"><span class="dot"></span><span id="stt" class="shm" data-text="Connecting to your TV…">Connecting to your TV…</span></div>
@@ -203,10 +203,14 @@ h1{font-size:22px;margin:18px 0 4px}p{color:var(--t2);margin:0 0 20px}
 </div><script>
 var k=new URLSearchParams(location.search).get('k'),view='form',sentAt=0;
 function g(i){return document.getElementById(i)}
-// Each label becomes letters for the hop, and the outline's gap is cut to its width.
+// Each label becomes letters for the hop, and the outline's gap is cut to its width. A hidden
+// form measures 0 wide, so widths are taken again when a form is shown and when a field is focused.
+function fit(){[].forEach.call(document.querySelectorAll('.fld'),function(f){var w=f.querySelector('label').offsetWidth;
+ if(w>0)f.style.setProperty('--lw',w+'px');});}
 [].forEach.call(document.querySelectorAll('.fld'),function(f){var l=f.querySelector('label'),t=l.textContent;l.textContent='';
  t.split('').forEach(function(ch,i){var s=document.createElement('span');s.textContent=ch;s.style.setProperty('--i',i);l.appendChild(s);});
- f.style.setProperty('--lw',l.offsetWidth+'px');});
+ f.querySelector('input').addEventListener('focus',fit);});
+fit();
 g('eye').onpointerdown=function(e){e.preventDefault()};
 g('eye').onclick=function(){var p=g('p'),on=p.type==='password';p.type=on?'text':'password';this.classList.toggle('on',on);
  this.setAttribute('aria-label',on?'Hide password':'Show password');p.classList.remove('flip');void p.offsetWidth;p.classList.add('flip');};
@@ -214,7 +218,7 @@ function form(){return view==='code'?g('cf'):g('f')}
 function phase(f,p){f.setAttribute('data-phase',p);var b=f.querySelector('.go');
  b.style.width=p==='done'?(f.querySelector('.l-done').offsetWidth+48)+'px':'';}
 function show(v){if(v===view)return;view=v;g('v-form').classList.toggle('hide',v!=='form');g('f').classList.toggle('hide',v!=='form');
- g('v-code').classList.toggle('hide',v!=='code');g('cf').classList.toggle('hide',v!=='code');}
+ g('v-code').classList.toggle('hide',v!=='code');g('cf').classList.toggle('hide',v!=='code');fit();}
 function status(text,state){var st=g('st'),t=g('stt');st.classList.toggle('err',state==='error');st.classList.toggle('hide',state==='done');
  t.classList.toggle('shm',state==='loading'||state==='working');t.textContent=text;t.setAttribute('data-text',text);}
 // Just after a submit the TV may not have answered yet; don't unfold the form over it.
