@@ -19,7 +19,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:name=".KickApp"
+        android:name=".SidekickApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:appCategory="video"
@@ -29,11 +29,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.KickTV">
+        android:theme="@style/Theme.Sidekick">
 
         <activity
             android:name=".ui.MainActivity"
-            android:theme="@style/Theme.KickTV.Launch"
+            android:theme="@style/Theme.Sidekick.Launch"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:exported="true"
             android:windowSoftInputMode="adjustNothing">
@@ -60,17 +60,18 @@
         <activity
             android:name=".player.PlayerActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.player"
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
-            android:theme="@style/Theme.KickTV.Player" />
+            android:theme="@style/Theme.Sidekick.Player" />
 
         <activity
             android:name=".player.MultiViewActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:theme="@style/Theme.KickTV.Player" />
+            android:theme="@style/Theme.Sidekick.Player" />
 
-        <!-- kicktv:// links from the TV home screen. -->
+        <!-- sidekick:// links from the TV home screen. -->
         <activity
             android:name=".ui.LinkActivity"
             android:exported="true"
@@ -79,7 +80,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="kicktv" />
+                <data android:scheme="sidekick" />
             </intent-filter>
         </activity>
 

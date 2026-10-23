@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest an idea for Sidekick
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe the feature and how you'd use it with the remote.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help?
+      description: What's hard or missing today?

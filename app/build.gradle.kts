@@ -10,15 +10,15 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
-val appVersionName = "1.2.0"
-val appVersionCode = 10200
+val appVersionName = "1.3.0"
+val appVersionCode = 10300
 
 android {
-    namespace = "com.kicktv.app"
+    namespace = "com.diriktv.sidekick"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.kicktv.app"
+        applicationId = "com.diriktv.sidekick"
         minSdk = 23
         targetSdk = 36
         versionCode = appVersionCode
@@ -92,10 +92,10 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 }
 
-// ./gradlew dist  ->  dist/KickTV-<version>.apk, ready to sideload.
+// ./gradlew dist  ->  dist/Sidekick-<version>.apk, ready to sideload.
 tasks.register<Copy>("dist") {
     dependsOn("assembleRelease")
     from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
     into(rootProject.layout.projectDirectory.dir("dist"))
-    rename { "KickTV-$appVersionName.apk" }
+    rename { "Sidekick-$appVersionName.apk" }
 }

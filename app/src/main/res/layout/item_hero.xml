@@ -112,7 +112,7 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <com.kicktv.app.ui.StepPlayerView
+        <com.diriktv.sidekick.ui.StepPlayerView
             android:id="@+id/heroSteps"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

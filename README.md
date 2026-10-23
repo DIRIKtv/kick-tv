@@ -1,20 +1,55 @@
-# Kick TV
+<p align="center">
+  <img src="docs/branding/banner.png" alt="Sidekick" width="480">
+</p>
 
-An unofficial Kick.com app for Android TV and Fire TV. Not affiliated with or endorsed by Kick.
+<p align="center">
+  <b>A free, open-source Kick app for Android TV, Google TV and Fire TV.</b><br>
+  Live streams with chat, past broadcasts, clips, multi-view and more, built for the remote.
+</p>
 
-Android 6.0+ (TV) · ~1.7 MB · [Latest release](https://github.com/DIRIKtv/kick-tv/releases/latest)
+<p align="center">
+  <a href="https://github.com/DIRIKtv/sidekick/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/DIRIKtv/sidekick?color=2cff05&label=download"></a>
+  <img alt="Android 6.0+" src="https://img.shields.io/badge/Android%20TV-6.0%2B-2cff05">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-lightgrey"></a>
+</p>
+
+> **Unofficial.** Sidekick is not made, endorsed or supported by Kick. "Kick" is a trademark of its
+> owner. See [Disclaimer](#disclaimer).
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Home screen" width="49%">
+  <img src="docs/screenshots/player.png" alt="Live stream with chat" width="49%">
+  <img src="docs/screenshots/multiview.png" alt="Multi-view" width="49%">
+  <img src="docs/screenshots/following.png" alt="Following" width="49%">
+</p>
+
+## Features
+
+- **Home**: live channels you follow, Continue watching, Recently watched, top streams in your
+  language, today's top clips and popular categories
+- **Player**: rewind live streams back to the start, quality and speed, captions, sleep timer,
+  loudness equalization, picture-in-picture
+- **Chat** beside or over the video, with 7TV emotes and filters (hide bots and !commands, calm busy chats)
+- **Multi-view**: watch up to 4 live channels at once; the highlighted one plays sound
+- **Following**: your Kick account's follows, plus favorites saved on the TV, with go-live alerts
+- **Channel pages** with past broadcasts (resume where you left off) and popular clips
+- **TV home screen** (Android TV / Google TV): a "Live on Kick" row and Play Next for past broadcasts
+- **Sign in** by scanning a QR code with your phone, or with the remote's on-screen pointer
+- **Automatic updates** straight from this page
+
+## Install
 
 **Download link (always the newest version):**
-`https://github.com/DIRIKtv/kick-tv/releases/latest/download/KickTV.apk`
 
-## Installing on a TV
+```
+https://github.com/DIRIKtv/sidekick/releases/latest/download/Sidekick.apk
+```
 
-### Fire TV (Downloader app, no computer needed)
-1. On the Fire TV, install **Downloader** (by AFTVnews) from the Amazon Appstore.
+### Fire TV (no computer needed)
+1. Install **Downloader** (by AFTVnews) from the Amazon Appstore.
 2. Settings → My Fire TV → Developer Options → **Install unknown apps** → turn on for Downloader.
    (No Developer Options? Settings → My Fire TV → About → click your device name 7 times.)
-3. Open Downloader and enter the download link above.
-4. Choose **Install**, then **Open**. Delete the downloaded file when it asks.
+3. Open Downloader, enter the download link above, then choose **Install** and **Open**.
 
 ### Google TV / Android TV
 1. Settings → System → About → click **Android TV OS build** 7 times to enable developer mode.
@@ -22,62 +57,74 @@ Android 6.0+ (TV) · ~1.7 MB · [Latest release](https://github.com/DIRIKtv/kick
    (Downloader, a file manager, or *Send Files to TV*).
 3. Download or send the APK to the TV and open it to install.
 
-### From a computer (adb)
+### From a computer
 ```sh
-adb connect <tv-ip>:5555        # enable ADB/network debugging on the TV first
-adb install -r KickTV.apk
+adb connect <tv-ip>:5555        # turn on network debugging on the TV first
+adb install -r Sidekick.apk
 ```
 
-The app appears on the home screen as **Kick TV**.
+### Updates
+Sidekick checks this page for a new version each time it opens and offers to install it
+(Settings → Automatic updates: every open, once a day, or off). The first time, Android asks you to
+allow Sidekick to install apps. Your settings and sign-in are kept.
 
-### Updating
-The app checks for new releases on its own (and under Settings → Check for updates), downloads them,
-and opens Android's installer. The first time, Android asks you to allow Kick TV to install apps
-(on Fire TV: Settings → My Fire TV → Developer options → Install unknown apps → Kick TV).
-You can also install a newer APK over the old one by hand; settings and sign-in are kept.
-If Android says the app "conflicts with an existing package", the old copy was signed with a
-different key (e.g. a development build) — uninstall it once, then install.
+> **Coming from "Kick TV"?** Sidekick is a new app ID, so it installs alongside the old app. Sign in
+> again in Sidekick, then uninstall Kick TV.
 
-## Features
-- **Home**: hero carousel of live followed channels (◀ ▶ to browse), Continue watching, Recently watched,
-  top streams by language, top clips of the day, top categories
-- **Following**: your Kick account's follows (after signing in) plus favorites saved on the TV
-- **Browse / Search**: categories and channels
-- **Channel pages**: live status, follow, past broadcasts with resume, popular clips
-- **Player**: play/pause, ◀ ▶ seek (hold to speed up), ⏪ ⏩, rewind live streams back to the start (DVR),
-  quality (Auto/Source/…), speed, captions, sleep timer, loudness equalization (evens out quiet and
-  loud streams), stats
-- **Chat**: beside or over the video, 7TV emotes, filters (hide bots / !commands, calm busy chats)
-- **Multi-view**: watch 2–4 live channels at once (☰ → Multi-view); the focused one plays sound
-- **Picture-in-picture**: Home while watching keeps the stream in a corner (on TVs that support it)
-- **Go-live alerts**: a notice when someone you follow goes live while the app is open (▶❚❚ to watch)
-- **TV home screen** (Android TV / Google TV): a "Live on Kick" row and past broadcasts in Play Next
-- **Sign in**: scan a QR code and log in on your phone, or use the remote's on-screen pointer
-- Remote: ☰ opens player settings / on a card opens the channel page
+## Using it
 
-## Building
+| Remote | Does |
+| --- | --- |
+| **OK** on a card | Watch |
+| **☰** (or hold OK) on a card | Open the channel page |
+| **◀ ▶** while watching | Seek (hold to go faster) |
+| **▲ ▼** while watching | Show the controls |
+| **☰** while watching | Player settings: quality, chat, multi-view, sleep timer… |
+| **Home** while watching | Keep watching in a corner (picture-in-picture, where supported) |
+
+## Privacy
+
+No ads, no analytics, no accounts of our own. Your Kick sign-in is stored encrypted on the TV and only
+sent to Kick. Phone sign-in sends your login to the TV over your home network, so use it on a network
+you trust. Full details: [PRIVACY.md](PRIVACY.md).
+
+## Disclaimer
+
+Sidekick is an independent, unofficial project. It is not affiliated with, endorsed by or connected to
+Kick or its owners. "Kick" and the Kick logo are trademarks of their respective owner.
+
+Kick doesn't offer an official API for TV apps, so Sidekick uses the same public endpoints as the
+kick.com website. Kick can change these at any time, which may break features until an update is
+released. Streams, chat and other content belong to their creators and are shown as Kick serves them.
+
+## Contributing
+
+Bug reports and ideas are welcome, so please [open an issue](https://github.com/DIRIKtv/sidekick/issues/new/choose).
+Pull requests are welcome too; for anything large, open an issue first so we can talk it through.
+
+### Building
 
 Requirements: JDK 21, Android SDK 36.
 
 ```sh
-./gradlew dist              # signed release -> dist/KickTV-<version>.apk
-./gradlew assembleDebug     # debug build (installs alongside as com.kicktv.app.debug)
-./gradlew lintRelease       # release lint (must be error-free)
+./gradlew assembleDebug        # debug build (installs alongside as com.diriktv.sidekick.debug)
+./gradlew testDebugUnitTest    # unit tests
+./gradlew lintRelease          # release lint (must be error-free)
 ```
 
-### Release signing — back this up
+<details>
+<summary>Releasing (maintainer)</summary>
+
 Release builds are signed with `keystore/kicktv-release.jks`, configured by `keystore.properties`
-(both git-ignored). **Keep copies of both somewhere safe.** If they're lost, future versions can't be
-installed as updates — every user would have to uninstall (losing their settings) and reinstall.
-Without `keystore.properties`, release builds fall back to the debug key.
+(both git-ignored; keep backups — without them, future versions can't install as updates). Without
+`keystore.properties`, release builds fall back to the debug key.
 
-### Making a new release
-1. Bump `appVersionName` and `appVersionCode` (must increase) at the top of `app/build.gradle.kts`, and commit.
-2. `scripts/release.sh "One change per line"` — lints, builds the signed APK, tags, and publishes a GitHub Release.
+1. Bump `appVersionName` and `appVersionCode` at the top of `app/build.gradle.kts`, add the changes
+   to [CHANGELOG.md](CHANGELOG.md), and commit.
+2. `scripts/release.sh "One change per line"` lints, builds the signed APK, tags and publishes the
+   GitHub release. Installed apps offer it the next time they're opened.
+</details>
 
-Installed apps see the new release within 12 hours (or immediately via Settings → Check for updates).
+## License
 
-## Notes
-Kick has no official API for third-party TV apps; this app uses the same endpoints as kick.com,
-which may change. Phone sign-in works over the local network only, protected by a one-time code in
-the QR, and only while the sign-in screen is open.
+[MIT](LICENSE) © DIRIKtv

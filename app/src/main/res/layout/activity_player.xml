@@ -23,7 +23,7 @@
             app:surface_type="surface_view"
             app:use_controller="false" />
 
-        <com.kicktv.app.ui.TraceLoader
+        <com.diriktv.sidekick.ui.TraceLoader
             android:id="@+id/buffering"
             android:layout_width="64dp"
             android:layout_height="64dp"
@@ -153,7 +153,7 @@
                             android:textSize="14sp" />
 
                         <!-- Live viewer count; its digits roll when a refresh changes it. -->
-                        <com.kicktv.app.ui.RollingCounter
+                        <com.diriktv.sidekick.ui.RollingCounter
                             android:id="@+id/viewerCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

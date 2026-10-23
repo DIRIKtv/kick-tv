@@ -15,13 +15,12 @@
         android:paddingEnd="30dp"
         android:paddingBottom="24dp">
 
-        <TextView
+        <ImageView
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-black"
-            android:text="KICK"
-            android:textColor="@color/kick_green"
-            android:textSize="24sp" />
+            android:layout_height="40dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/logo_wordmark" />
 
         <TextView
             android:layout_width="wrap_content"

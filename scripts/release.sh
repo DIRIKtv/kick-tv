@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 version=$(sed -n 's/^val appVersionName = "\(.*\)"/\1/p' app/build.gradle.kts)
-notes=${1:-"Kick TV $version"}
+notes=${1:-"Sidekick $version"}
 tag="v$version"
 
 if git rev-parse "$tag" >/dev/null 2>&1; then
@@ -15,10 +15,10 @@ fi
 [ -f keystore.properties ] || { echo "keystore.properties missing: releases must be signed with the release key." >&2; exit 1; }
 
 ./gradlew lintRelease dist
-apk="dist/KickTV-$version.apk"
-cp "$apk" dist/KickTV.apk   # fixed name -> stable .../releases/latest/download/KickTV.apk link
+apk="dist/Sidekick-$version.apk"
+cp "$apk" dist/Sidekick.apk   # fixed name -> stable .../releases/latest/download/Sidekick.apk link
 
-git tag -a "$tag" -m "Kick TV $version"
+git tag -a "$tag" -m "Sidekick $version"
 git push origin "$tag"
-gh release create "$tag" "$apk" dist/KickTV.apk --title "Kick TV $version" --notes "$notes"
+gh release create "$tag" "$apk" dist/Sidekick.apk --title "Sidekick $version" --notes "$notes"
 echo "Published $tag"

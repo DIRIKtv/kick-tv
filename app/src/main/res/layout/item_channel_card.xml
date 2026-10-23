@@ -15,7 +15,7 @@
         android:duplicateParentState="true"
         android:foreground="@drawable/fg_circle">
 
-        <com.kicktv.app.ui.AspectImageView
+        <com.diriktv.sidekick.ui.AspectImageView
             android:id="@+id/avatar"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

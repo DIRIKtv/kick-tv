@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "KickTV"
+rootProject.name = "Sidekick"
 include(":app")

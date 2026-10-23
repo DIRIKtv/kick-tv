@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.KickTV" parent="@android:style/Theme.Material.NoActionBar">
+    <style name="Theme.Sidekick" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:colorPrimary">@color/kick_green</item>
         <item name="android:colorAccent">@color/kick_green</item>
@@ -13,8 +13,8 @@
         <item name="android:windowAnimationStyle">@style/KickActivityAnim</item>
     </style>
 
-    <!-- Shown while the app process starts; MainActivity switches to Theme.KickTV. -->
-    <style name="Theme.KickTV.Launch">
+    <!-- Shown while the app process starts; MainActivity switches to Theme.Sidekick. -->
+    <style name="Theme.Sidekick.Launch">
         <item name="android:windowBackground">@drawable/splash</item>
     </style>
 
@@ -25,7 +25,7 @@
         <item name="android:activityCloseExitAnimation">@anim/activity_close_exit</item>
     </style>
 
-    <style name="Theme.KickTV.Player">
+    <style name="Theme.Sidekick.Player">
         <item name="android:windowBackground">@android:color/black</item>
     </style>
 

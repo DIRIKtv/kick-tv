@@ -6,7 +6,7 @@
     android:paddingTop="28dp">
 
     <!-- Draws its own pill and lens; the field fades in as it opens. -->
-    <com.kicktv.app.ui.SearchPill
+    <com.diriktv.sidekick.ui.SearchPill
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:layout_marginStart="32dp"
@@ -26,7 +26,7 @@
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary"
             android:textSize="17sp" />
-    </com.kicktv.app.ui.SearchPill>
+    </com.diriktv.sidekick.ui.SearchPill>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -53,7 +53,7 @@
             android:textColor="@color/text_secondary"
             android:textSize="17sp" />
 
-        <com.kicktv.app.ui.TraceLoader
+        <com.diriktv.sidekick.ui.TraceLoader
             android:id="@+id/progress"
             android:layout_width="48dp"
             android:layout_height="48dp"

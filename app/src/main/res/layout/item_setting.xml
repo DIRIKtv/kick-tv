@@ -62,7 +62,7 @@
         android:textColor="@color/on_focus_accent"
         android:textSize="13sp" />
 
-    <com.kicktv.app.ui.LiquidToggle
+    <com.diriktv.sidekick.ui.LiquidToggle
         android:id="@+id/toggle"
         android:layout_width="46dp"
         android:layout_height="26dp"

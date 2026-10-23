@@ -25,7 +25,7 @@
         android:paddingEnd="40dp"
         android:paddingBottom="30dp" />
 
-    <com.kicktv.app.ui.TraceLoader
+    <com.diriktv.sidekick.ui.TraceLoader
         android:id="@+id/progress"
         android:layout_width="48dp"
         android:layout_height="48dp"

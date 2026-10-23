@@ -14,7 +14,7 @@
         android:background="@drawable/bg_thumb"
         android:foreground="@drawable/fg_card">
 
-        <com.kicktv.app.ui.AspectImageView
+        <com.diriktv.sidekick.ui.AspectImageView
             android:id="@+id/thumb"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -86,7 +86,7 @@
         android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
-        <com.kicktv.app.ui.AspectImageView
+        <com.diriktv.sidekick.ui.AspectImageView
             android:id="@+id/avatar"
             android:layout_width="28dp"
             android:layout_height="28dp"

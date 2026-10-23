@@ -1,0 +1,47 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: "I opened a stream from Following, pressed Back, and…"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sidekick version
+      description: Settings → About Sidekick
+      placeholder: "1.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device type
+      options:
+        - Fire TV (Stick / Cube)
+        - Chromecast with Google TV / Google TV Streamer
+        - Nvidia Shield
+        - Other Android TV / Google TV
+        - Phone or tablet
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Device model and Android version (if you know it)
+      placeholder: "Fire TV Stick 4K Max, Fire OS 8"
+  - type: input
+    id: channel
+    attributes:
+      label: Channel or stream (if it's about playback or chat)
+      placeholder: "kick.com/…"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots or a photo of the screen help a lot.

@@ -22,7 +22,7 @@
         android:textColor="@color/text_secondary"
         android:textSize="17sp" />
 
-    <com.kicktv.app.ui.TraceLoader
+    <com.diriktv.sidekick.ui.TraceLoader
         android:id="@+id/progress"
         android:layout_width="48dp"
         android:layout_height="48dp"
