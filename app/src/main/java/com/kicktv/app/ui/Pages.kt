@@ -72,30 +72,36 @@ class FollowingPage(act: FragmentActivity) : GridPage(act, R.layout.page_grid, 4
                 status.text = "Nothing followed yet.\n\nSign in under Settings to bring your Kick follows,\nor press ♥ in the player or on a channel page."
                 return@launch
             }
-            val infos = favs.map { f -> async { f to runCatching { KickApi.channelForCard(f.slug) }.getOrNull() } }.awaitAll()
-            val live = infos.mapNotNull { it.second }.filter { it.isLive }.sortedByDescending { it.liveViewers }
-            val offline = infos.filter { it.second?.isLive != true }
-            val items = mutableListOf<GridItem>()
-            if (live.isNotEmpty()) {
-                items += GridItem.Header("Live now")
-                items += live.map {
-                    GridItem.Stream(
-                        com.kicktv.app.data.LiveStream(it.slug, it.username, it.liveTitle.orEmpty(), it.liveViewers,
-                            it.liveThumbnail, it.avatar, it.liveCategory, null, it.liveStartTime)
-                    )
+            val live = Follows.liveNow(act)
+            val liveSlugs = live.map { it.slug.lowercase() }.toSet()
+            val offline = favs.filter { it.slug.lowercase() !in liveSlugs }
+            fun build(info: Map<String, com.kicktv.app.data.ChannelInfo>): List<GridItem> {
+                val items = mutableListOf<GridItem>()
+                if (live.isNotEmpty()) {
+                    items += GridItem.Header("Live now")
+                    items += live.map { GridItem.Stream(it) }
                 }
-            }
-            if (offline.isNotEmpty()) {
-                items += GridItem.Header("Offline")
-                items += offline.map { (fav, info) ->
-                    GridItem.Channel(fav.slug, info?.username ?: fav.username, info?.avatar ?: fav.avatar, false,
-                        info?.let { "${Fmt.count(it.followers)} followers" } ?: "")
+                if (offline.isNotEmpty()) {
+                    items += GridItem.Header("Offline")
+                    items += offline.map { fav ->
+                        val c = info[fav.slug.lowercase()]
+                        GridItem.Channel(fav.slug, c?.username ?: fav.username, c?.avatar ?: fav.avatar, false,
+                            c?.let { "${Fmt.count(it.followers)} followers" } ?: "Offline")
+                    }
                 }
+                return items
             }
             val hadFocus = list.hasFocus()
-            adapter.submit(items)
+            adapter.submit(build(emptyMap()))
             progress.setVisible(false)
             if (hadFocus) list.post { focusContent() }
+
+            // Follower counts are a nicety: fetch them afterwards, and keep them a good while.
+            if (offline.isEmpty()) return@launch
+            val info = offline.map { f ->
+                async { runCatching { KickApi.channel(f.slug, maxAgeMs = 30 * 60_000) }.getOrNull() }
+            }.awaitAll().filterNotNull().associateBy { it.slug.lowercase() }
+            if (info.isNotEmpty()) adapter.update(build(info))
         }
     }
 }
@@ -230,6 +236,8 @@ class SettingsPage(private val act: FragmentActivity, private val onChanged: () 
     }
 
     private val qualities = listOf(0, 1080, 720, 480, 360, 160)
+    private val pipSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+        act.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
     private fun qualityLabel(h: Int) = if (h == 0) "Auto" else "${h}p"
 
     private fun rows(): List<Row> = listOf(
@@ -259,6 +267,16 @@ class SettingsPage(private val act: FragmentActivity, private val onChanged: () 
                 prefs.seekStepSeconds = steps[it]
             }
         },
+        Row.Setting("Loudness equalization", { "Evens out volume between quiet and loud streams" }, R.drawable.ic_volume,
+            { if (prefs.loudnessEq) "On" else "Off" }, toggle = { prefs.loudnessEq }) {
+            prefs.loudnessEq = !prefs.loudnessEq
+        },
+    ) + (if (pipSupported) listOf(
+        Row.Setting("Picture-in-picture", { "Home shrinks the stream into a corner instead of stopping it" }, R.drawable.ic_pip,
+            { if (prefs.autoPip) "On" else "Off" }, toggle = { prefs.autoPip }) {
+            prefs.autoPip = !prefs.autoPip
+        },
+    ) else emptyList()) + listOf(
 
         Row.Header("CHAT"),
         Row.Setting("Show chat", { "Open chat automatically on live streams" }, R.drawable.ic_chat,
@@ -277,10 +295,36 @@ class SettingsPage(private val act: FragmentActivity, private val onChanged: () 
             choose("Chat text size", null, listOf("Small", "Medium", "Large", "Extra large"),
                 values = sizes.map { "${it}sp" }, selected = sizes.indexOf(prefs.chatTextSize)) { prefs.chatTextSize = sizes[it] }
         },
+        Row.Setting("7TV emotes", { "Show channels' 7TV emotes as images" }, R.drawable.ic_emote,
+            { if (prefs.sevenTvEmotes) "On" else "Off" }, toggle = { prefs.sevenTvEmotes }) {
+            prefs.sevenTvEmotes = !prefs.sevenTvEmotes
+        },
+        Row.Setting("Hide bot messages", { "Botrix, Kickbot and anyone with a bot badge" }, R.drawable.ic_filter,
+            { if (prefs.chatHideBots) "On" else "Off" }, toggle = { prefs.chatHideBots }) {
+            prefs.chatHideBots = !prefs.chatHideBots
+        },
+        Row.Setting("Hide !commands", { "Messages that start with !" }, R.drawable.ic_filter,
+            { if (prefs.chatHideCommands) "On" else "Off" }, toggle = { prefs.chatHideCommands }) {
+            prefs.chatHideCommands = !prefs.chatHideCommands
+        },
+        Row.Setting("Calm busy chats", { "Steady pace that stays readable; skips some messages when chat floods" }, R.drawable.ic_chat,
+            { if (prefs.chatCalm) "On" else "Off" }, toggle = { prefs.chatCalm }) {
+            prefs.chatCalm = !prefs.chatCalm
+        },
 
         Row.Header("APP"),
         Row.Setting("Check for updates", { "Updates come from github.com/${com.kicktv.app.data.Updater.REPO}" }, R.drawable.ic_refresh,
             { "v${com.kicktv.app.BuildConfig.VERSION_NAME}" }) { checkForUpdates() },
+        Row.Setting("Clear watch history", { "Empties Continue watching and Recently watched" }, R.drawable.ic_delete,
+            { null }) {
+            OptionSheet.confirm(act, "Clear watch history?", "Resume points for past broadcasts are cleared too.",
+                "Clear history", R.drawable.ic_delete) {
+                prefs.clearHistory()
+                com.kicktv.app.tv.TvHome.clearWatchNext(act)
+                onChanged()
+                android.widget.Toast.makeText(act, "Watch history cleared", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        },
 
         Row.Header("BROWSING"),
         Row.Setting("Stream language", { "Filters the rows on Home" }, R.drawable.ic_language,
@@ -290,6 +334,10 @@ class SettingsPage(private val act: FragmentActivity, private val onChanged: () 
                 prefs.language = Languages.all[it].first
                 onChanged()
             }
+        },
+        Row.Setting("Go-live alerts", { "A notice when someone you follow goes live while the app is open" }, R.drawable.ic_bell,
+            { if (prefs.liveAlerts) "On" else "Off" }, toggle = { prefs.liveAlerts }) {
+            prefs.liveAlerts = !prefs.liveAlerts
         },
     )
 
@@ -326,7 +374,7 @@ class SettingsPage(private val act: FragmentActivity, private val onChanged: () 
         container.addView(TextView(act).apply {
             text = "Kick TV ${com.kicktv.app.BuildConfig.VERSION_NAME} • unofficial app, not affiliated with Kick\n" +
                 "Tips: hold OK (or press ☰) on a stream to open its channel.\n" +
-                "In the player: ◀ ▶ seek (hold to speed up), ▲ ▼ show controls, ☰ opens settings."
+                "In the player: ◀ ▶ seek (hold to speed up), ▲ ▼ show controls, ☰ opens settings (multi-view, sleep timer)."
             setTextColor(act.getColor(R.color.text_secondary))
             textSize = 12f
             setLineSpacing(0f, 1.3f)
@@ -342,10 +390,11 @@ class SettingsPage(private val act: FragmentActivity, private val onChanged: () 
         val value = row.value()
         v.findViewById<TextView>(R.id.value).apply {
             text = value.orEmpty()
-            setVisible(value != null)
-            if (row.toggle != null) {
-                setBackgroundResource(if (row.toggle.invoke()) R.drawable.bg_toggle_on else R.drawable.bg_toggle_off)
-            }
+            setVisible(value != null && row.toggle == null)
+        }
+        v.findViewById<LiquidToggle>(R.id.toggle).apply {
+            setVisible(row.toggle != null)
+            row.toggle?.let { setChecked(it(), animate = true) }
         }
         v.findViewById<View>(R.id.chevron).setVisible(row.toggle == null)
         v.setOnClickListener {

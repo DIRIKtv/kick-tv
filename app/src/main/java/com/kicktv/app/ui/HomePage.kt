@@ -6,8 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -15,12 +13,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.kicktv.app.R
 import com.kicktv.app.data.Follows
+import com.kicktv.app.data.HistoryEntry
 import com.kicktv.app.data.KickApi
 import com.kicktv.app.data.LiveStream
 import com.kicktv.app.data.Page
 import com.kicktv.app.data.Prefs
+import com.kicktv.app.data.Video
+import com.kicktv.app.tv.TvHome
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 /** Pages hosted by the main screen next to the nav rail. */
@@ -36,7 +36,7 @@ class HomePage(private val act: FragmentActivity) : MainPage {
     private val prefs = Prefs(act)
     private val list = RecyclerView(act)
     private val status = TextView(act)
-    private val progress = ProgressBar(act)
+    private val progress = TraceLoader(act)
     private val rows = mutableListOf<Row>()
     private var lastLoad = 0L
     private var loadedVersion = -1
@@ -60,17 +60,6 @@ class HomePage(private val act: FragmentActivity) : MainPage {
     private var heroFromFollows = false
     private var heroIndex = 0
     private var heroView: View? = null
-    private val heroRotate = object : Runnable {
-        override fun run() {
-            // Rotate on its own only while the viewer is looking elsewhere.
-            val hero = heroView?.findViewById<View>(R.id.hero)
-            if (heroItems.size > 1 && hero != null && !hero.hasFocus() && hero.isAttachedToWindow) {
-                heroIndex = (heroIndex + 1) % heroItems.size
-                bindHero(animate = true)
-            }
-            list.postDelayed(this, 9000)
-        }
-    }
 
     override val view: View = FrameLayout(act).apply {
         addView(list, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -80,7 +69,9 @@ class HomePage(private val act: FragmentActivity) : MainPage {
 
     private inner class Row(
         val title: String,
-        val loader: suspend (String?) -> Page<LiveStream>,
+        /** Built from this TV's watch history rather than loaded from Kick. */
+        val local: Boolean = false,
+        val loader: suspend (String?) -> Page<GridItem>,
     ) {
         var cursor: String? = null
         var done = false
@@ -99,8 +90,8 @@ class HomePage(private val act: FragmentActivity) : MainPage {
             act.lifecycleScope.launch {
                 try {
                     val page = loader(cursor)
-                    val seen = adapter.items.mapNotNull { (it as? GridItem.Stream)?.stream?.slug }.toSet()
-                    adapter.append(page.items.filter { it.slug !in seen }.map { GridItem.Stream(it) })
+                    val seen = adapter.items.map { it.key }.toSet()
+                    adapter.append(page.items.filter { it.key !in seen })
                     cursor = page.next
                     done = page.next == null
                     if (pendingFocus && page.items.isNotEmpty()) list.post { if (focusContent()) pendingFocus = false }
@@ -165,8 +156,6 @@ class HomePage(private val act: FragmentActivity) : MainPage {
         list.itemAnimator = null
         status.setTextColor(act.getColor(R.color.text_secondary))
         status.textSize = 17f
-        progress.indeterminateTintList = android.content.res.ColorStateList.valueOf(act.getColor(R.color.kick_green))
-        list.postDelayed(heroRotate, 9000)
     }
 
     // region hero
@@ -191,7 +180,16 @@ class HomePage(private val act: FragmentActivity) : MainPage {
                 else -> false
             }
         }
-        hero.setOnFocusChangeListener { _, has -> v.findViewById<TextView>(R.id.heroHint).alpha = if (has) 1f else 0.6f }
+        // The step player fills the current bar and moves the carousel on, but only while the
+        // viewer is looking elsewhere; focusing the hero holds it.
+        val steps = v.findViewById<StepPlayerView>(R.id.heroSteps)
+        steps.onAdvance = { i ->
+            if (i in heroItems.indices) { heroIndex = i; bindHero(animate = true) }
+        }
+        hero.setOnFocusChangeListener { _, has ->
+            v.findViewById<TextView>(R.id.heroHint).alpha = if (has) 1f else 0.6f
+            steps.playing = !has
+        }
     }
 
     private fun bindHero(animate: Boolean, direction: Int = 1) {
@@ -215,20 +213,9 @@ class HomePage(private val act: FragmentActivity) : MainPage {
         v.findViewById<View>(R.id.heroPrev).setVisible(heroIndex > 0)
         v.findViewById<View>(R.id.heroNext).setVisible(heroIndex < heroItems.size - 1)
 
-        val dots = v.findViewById<LinearLayout>(R.id.heroDots)
-        dots.removeAllViews()
-        if (heroItems.size > 1) {
-            heroItems.indices.forEach { i ->
-                dots.addView(View(act).apply {
-                    setBackgroundResource(R.drawable.dot)
-                    alpha = if (i == heroIndex) 1f else 0.35f
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        act.getColor(if (i == heroIndex) R.color.kick_green else R.color.text_primary)
-                    )
-                }, LinearLayout.LayoutParams(act.dp(if (i == heroIndex) 9 else 7), act.dp(if (i == heroIndex) 9 else 7)).apply {
-                    marginStart = act.dp(5)
-                })
-            }
+        v.findViewById<StepPlayerView>(R.id.heroSteps).apply {
+            bind(heroItems.size, heroIndex)
+            setVisible(heroItems.size > 1)
         }
         if (animate) {
             content.forEach {
@@ -243,7 +230,56 @@ class HomePage(private val act: FragmentActivity) : MainPage {
 
     override fun onShown() {
         if (System.currentTimeMillis() - lastLoad > 3 * 60_000 || loadedVersion != Follows.version) reload()
+        else if (historyStamp() != loadedHistory) refreshHistoryRows()
     }
+
+    // region watch history rows
+
+    private var loadedHistory = 0L
+    private var liveSlugs: Set<String> = emptySet()
+
+    private fun historyStamp() = prefs.history.firstOrNull()?.watchedAt ?: 0L
+
+    /** Past broadcasts started but not finished, most recent first. */
+    private fun continueWatching(): List<GridItem> = prefs.history
+        .filter { it.kind == HistoryEntry.VOD && it.source != null && it.videoId != null }
+        .mapNotNull { e ->
+            val pos = prefs.vodPosition(e.videoId!!)
+            if (pos < 10_000 || (e.durationMs > 0 && pos > e.durationMs - 60_000)) return@mapNotNull null
+            val video = Video(e.videoId, e.title, e.source!!, e.thumbnail, e.durationMs, 0, e.createdAt, e.category)
+            GridItem.Vod(video, e.slug, if (e.durationMs > 0) pos.toFloat() / e.durationMs else 0f, channelName = e.username)
+        }
+        .take(20)
+
+    /** Channels watched recently, live ones marked. */
+    private fun recentlyWatched(): List<GridItem> {
+        val seen = HashSet<String>()
+        return prefs.history.filter { seen.add(it.slug.lowercase()) }.take(20).map { e ->
+            val live = e.slug.lowercase() in liveSlugs
+            GridItem.Channel(e.slug, e.username, e.avatar, live, if (live) "Live now" else "Watched ${Fmt.ago(e.watchedAt)}")
+        }
+    }
+
+    private fun historyRows(): List<Row> = buildList {
+        val cont = continueWatching()
+        if (cont.isNotEmpty()) add(Row("Continue watching", local = true) { Page(cont, null) })
+        val recent = recentlyWatched()
+        if (recent.isNotEmpty()) add(Row("Recently watched", local = true) { Page(recent, null) })
+    }
+
+    /** After watching something, update just the history rows instead of reloading Home. */
+    private fun refreshHistoryRows() {
+        loadedHistory = historyStamp()
+        val keepFocus = list.hasFocus()
+        val firstNetwork = rows.indexOfFirst { !it.local }.let { if (it < 0) rows.size else it }
+        repeat(firstNetwork) { rows.removeAt(0) }
+        rows.addAll(0, historyRows())
+        rows.filter { it.local }.forEach { it.loadMore() }
+        rowAdapter.notifyDataSetChanged()
+        if (keepFocus && !list.hasFocus()) list.post { focusContent() }
+    }
+
+    // endregion
 
     fun reload() {
         if (loading) return
@@ -257,19 +293,14 @@ class HomePage(private val act: FragmentActivity) : MainPage {
             try {
                 val lang = prefs.language.ifEmpty { null }
 
-                val liveFollowsJob = async {
-                    Follows.all(act).take(60).map { f ->
-                        async { runCatching { KickApi.channelForCard(f.slug) }.getOrNull() }
-                    }.awaitAll().filterNotNull().filter { it.isLive }.sortedByDescending { it.liveViewers }
-                }
+                val liveFollowsJob = async { runCatching { Follows.liveNow(act) }.getOrDefault(emptyList()) }
                 val categoriesJob = async { runCatching { KickApi.categories(1, 8).items }.getOrDefault(emptyList()) }
                 val topJob = async { runCatching { KickApi.livestreams(language = lang, limit = 24) }.getOrNull() }
 
-                val liveFollows = liveFollowsJob.await().map {
-                    LiveStream(it.slug, it.username, it.liveTitle.orEmpty(), it.liveViewers, it.liveThumbnail,
-                        it.avatar, it.liveCategory, null, it.liveStartTime)
-                }
+                val liveFollows = liveFollowsJob.await()
                 val top = topJob.await()
+                liveSlugs = liveFollows.map { it.slug.lowercase() }.toSet()
+                TvHome.publishAsync(act, liveFollows, top?.items.orEmpty())
 
                 // Hero: live follows, or the biggest streams when none of them are on.
                 heroFromFollows = liveFollows.isNotEmpty()
@@ -277,14 +308,20 @@ class HomePage(private val act: FragmentActivity) : MainPage {
                 heroIndex = heroIndex.coerceAtMost((heroItems.size - 1).coerceAtLeast(0))
 
                 val newRows = mutableListOf<Row>()
+                loadedHistory = historyStamp()
+                newRows += historyRows()
                 newRows += Row(if (lang == null) "Top live" else "Top live • ${Languages.label(lang)}") { cursor ->
-                    if (cursor == null && top != null) top else KickApi.livestreams(cursor = cursor, language = lang)
+                    (if (cursor == null && top != null) top else KickApi.livestreams(cursor = cursor, language = lang)).asCards()
                 }
                 if (lang != null) {
-                    newRows += Row("Top live • All languages") { KickApi.livestreams(cursor = it) }
+                    newRows += Row("Top live • All languages") { KickApi.livestreams(cursor = it).asCards() }
+                }
+                newRows += Row("Top clips today") { cursor ->
+                    val page = KickApi.clips(cursor = cursor, time = "day")
+                    Page(page.items.map { GridItem.Clip(it) }, page.next)
                 }
                 for (cat in categoriesJob.await()) {
-                    newRows += Row(cat.name) { KickApi.livestreams(cursor = it, categoryId = cat.id, language = lang) }
+                    newRows += Row(cat.name) { KickApi.livestreams(cursor = it, categoryId = cat.id, language = lang).asCards() }
                 }
 
                 rows.clear()
@@ -313,6 +350,8 @@ class HomePage(private val act: FragmentActivity) : MainPage {
         return target?.requestFocus() ?: false
     }
 }
+
+private fun Page<LiveStream>.asCards(): Page<GridItem> = Page(items.map { GridItem.Stream(it) }, next)
 
 object Languages {
     val all = listOf(

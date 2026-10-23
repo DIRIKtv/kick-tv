@@ -112,14 +112,13 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/heroDots"
+        <com.kicktv.app.ui.StepPlayerView
+            android:id="@+id/heroSteps"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="22dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal" />
+            android:layout_margin="20dp"
+            android:visibility="gone" />
 
         <ImageView
             android:id="@+id/heroPrev"

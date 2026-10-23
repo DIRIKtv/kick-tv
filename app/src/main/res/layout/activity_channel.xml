@@ -25,10 +25,9 @@
         android:paddingEnd="40dp"
         android:paddingBottom="30dp" />
 
-    <ProgressBar
+    <com.kicktv.app.ui.TraceLoader
         android:id="@+id/progress"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_gravity="center"
-        android:indeterminateTint="@color/kick_green" />
+        android:layout_gravity="center" />
 </FrameLayout>

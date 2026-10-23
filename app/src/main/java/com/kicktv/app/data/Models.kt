@@ -23,6 +23,8 @@ data class Category(
 
 data class ChannelInfo(
     val id: Int,
+    /** The owner's user id (7TV keys channels by it). */
+    val userId: Int = 0,
     val slug: String,
     val username: String,
     val bio: String?,
@@ -53,6 +55,20 @@ data class Video(
     val category: String?,
     /** True for the recording of a broadcast that is still live. */
     val isLive: Boolean = false,
+)
+
+data class Clip(
+    val id: String,
+    val title: String,
+    val source: String,
+    val thumbnail: String?,
+    val durationMs: Long,
+    val views: Int,
+    val createdAt: String?,
+    val category: String?,
+    val channelSlug: String,
+    val channelName: String,
+    val channelAvatar: String?,
 )
 
 data class SearchChannel(

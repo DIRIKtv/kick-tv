@@ -23,7 +23,20 @@ sealed class GridItem {
         val subtitle: String,
     ) : GridItem()
     data class Cat(val category: Category) : GridItem()
-    data class Vod(val video: Video, val channelSlug: String, val progress: Float) : GridItem()
+    /** [channelName] set shows whose broadcast it is (rows mixing channels, like Continue watching). */
+    data class Vod(val video: Video, val channelSlug: String, val progress: Float, val channelName: String? = null) : GridItem()
+    data class Clip(val clip: com.kicktv.app.data.Clip) : GridItem()
+
+    /** Identity for de-duplicating pages as they load. */
+    val key: String
+        get() = when (this) {
+            is Header -> "h:$text"
+            is Stream -> "s:${stream.slug.lowercase()}"
+            is Channel -> "c:${slug.lowercase()}"
+            is Cat -> "k:${category.id}"
+            is Vod -> "v:${video.uuid}"
+            is Clip -> "p:${clip.id}"
+        }
 }
 
 /** One adapter for every card type, so rows and grids look and behave the same. */
@@ -53,6 +66,14 @@ class GridAdapter(
         if (wasEmpty && list.isNotEmpty()) revealList()
     }
 
+    /** Swap in new contents of the same shape without the reveal animation (keeps focus in place). */
+    fun update(list: List<GridItem>) {
+        if (list.size != items.size) return submit(list)
+        items.clear()
+        items.addAll(list)
+        notifyItemRangeChanged(0, list.size)
+    }
+
     fun append(list: List<GridItem>) {
         val wasEmpty = items.isEmpty()
         val start = items.size
@@ -79,7 +100,7 @@ class GridAdapter(
 
     override fun getItemViewType(position: Int) = when (items[position]) {
         is GridItem.Header -> 0
-        is GridItem.Stream, is GridItem.Vod -> 1
+        is GridItem.Stream, is GridItem.Vod, is GridItem.Clip -> 1
         is GridItem.Channel -> 2
         is GridItem.Cat -> 3
     }
@@ -96,6 +117,10 @@ class GridAdapter(
             v.layoutParams = v.layoutParams.apply {
                 width = cardWidthPx ?: ViewGroup.LayoutParams.MATCH_PARENT
             }
+        }
+        // In a horizontal row (fixed card width), channel cards get a fixed width too instead of filling it.
+        if (viewType == 2 && cardWidthPx != null) {
+            v.layoutParams = v.layoutParams.apply { width = cardWidthPx * 3 / 4 }
         }
         if (viewType == 3) v.findViewById<AspectImageView>(R.id.banner).ratio = 4f / 3f
         // Clip images to the rounded card so corners don't poke out under the focus outline.
@@ -126,7 +151,7 @@ class GridAdapter(
             is GridItem.Stream -> {
                 val s = item.stream
                 v.findViewById<ImageView>(R.id.thumb).loadThumb(Img.thumb(s.thumbnail))
-                v.findViewById<ImageView>(R.id.avatar).loadAvatar(s.avatar)
+                v.findViewById<ImageView>(R.id.avatar).apply { setVisible(true); loadAvatar(s.avatar) }
                 v.findViewById<TextView>(R.id.title).text = s.title
                 v.findViewById<TextView>(R.id.channel).text = s.username
                 v.findViewById<TextView>(R.id.category).apply { text = s.category.orEmpty(); setVisible(s.category != null) }
@@ -141,7 +166,8 @@ class GridAdapter(
                 v.findViewById<View>(R.id.avatar).setVisible(false)
                 v.findViewById<TextView>(R.id.title).text = video.title
                 v.findViewById<TextView>(R.id.channel).text =
-                    listOf(Fmt.ago(video.createdAt), "${Fmt.count(video.views)} views").filter { it.isNotEmpty() }.joinToString(" • ")
+                    listOfNotNull(item.channelName, Fmt.ago(video.createdAt), video.views.takeIf { it > 0 }?.let { "${Fmt.count(it)} views" })
+                        .filter { it.isNotEmpty() }.joinToString(" • ")
                 v.findViewById<TextView>(R.id.category).apply { text = video.category.orEmpty(); setVisible(video.category != null) }
                 v.findViewById<View>(R.id.viewers).setVisible(false)
                 v.findViewById<View>(R.id.liveBadge).setVisible(false)
@@ -151,6 +177,19 @@ class GridAdapter(
                     progress = (item.progress * 1000).toInt()
                     setVisible(item.progress > 0.01f)
                 }
+            }
+            is GridItem.Clip -> {
+                val c = item.clip
+                v.findViewById<ImageView>(R.id.thumb).loadThumb(c.thumbnail)
+                v.findViewById<ImageView>(R.id.avatar).apply { setVisible(true); loadAvatar(c.channelAvatar) }
+                v.findViewById<TextView>(R.id.title).text = c.title.ifBlank { "Clip" }
+                v.findViewById<TextView>(R.id.channel).text =
+                    listOf(c.channelName, "${Fmt.count(c.views)} views", Fmt.ago(c.createdAt)).filter { it.isNotEmpty() }.joinToString(" • ")
+                v.findViewById<TextView>(R.id.category).apply { text = c.category.orEmpty(); setVisible(c.category != null) }
+                v.findViewById<View>(R.id.viewers).setVisible(false)
+                v.findViewById<View>(R.id.liveBadge).setVisible(false)
+                v.findViewById<TextView>(R.id.duration).apply { text = Fmt.time(c.durationMs); setVisible(true) }
+                v.findViewById<View>(R.id.resumeBar).setVisible(false)
             }
             is GridItem.Channel -> {
                 v.findViewById<ImageView>(R.id.avatar).loadAvatar(item.avatar)

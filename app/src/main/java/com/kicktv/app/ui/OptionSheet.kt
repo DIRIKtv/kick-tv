@@ -26,6 +26,8 @@ class OptionSheet(private val context: Context) {
         val icon: Int? = null,
         val checked: Boolean = false,
         val submenu: Boolean = false,
+        /** Sweep a band of light across the label while something is in progress. */
+        val shimmer: Boolean = false,
         val action: (OptionSheet) -> Unit,
     )
 
@@ -148,7 +150,7 @@ class OptionSheet(private val context: Context) {
         var toFocus: View? = null
         for (item in page.items()) {
             val row = LayoutInflater.from(context).inflate(R.layout.item_option, itemsView, false)
-            row.findViewById<TextView>(R.id.label).text = item.label
+            row.findViewById<ShimmerTextView>(R.id.label).apply { text = item.label; shimmer = item.shimmer }
             row.findViewById<TextView>(R.id.sub).apply { text = item.sub.orEmpty(); setVisible(!item.sub.isNullOrEmpty()) }
             row.findViewById<TextView>(R.id.value).apply { text = item.value.orEmpty(); setVisible(!item.value.isNullOrEmpty()) }
             row.findViewById<ImageView>(R.id.icon).apply {

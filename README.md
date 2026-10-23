@@ -39,12 +39,19 @@ If Android says the app "conflicts with an existing package", the old copy was s
 different key (e.g. a development build) — uninstall it once, then install.
 
 ## Features
-- **Home**: hero carousel of live followed channels (◀ ▶ to browse), top streams by language, top categories
+- **Home**: hero carousel of live followed channels (◀ ▶ to browse), Continue watching, Recently watched,
+  top streams by language, top clips of the day, top categories
 - **Following**: your Kick account's follows (after signing in) plus favorites saved on the TV
 - **Browse / Search**: categories and channels
-- **Channel pages**: live status, follow, past broadcasts with resume
+- **Channel pages**: live status, follow, past broadcasts with resume, popular clips
 - **Player**: play/pause, ◀ ▶ seek (hold to speed up), ⏪ ⏩, rewind live streams back to the start (DVR),
-  quality (Auto/Source/…), speed, captions, live chat (beside or over the video), stats
+  quality (Auto/Source/…), speed, captions, sleep timer, loudness equalization (evens out quiet and
+  loud streams), stats
+- **Chat**: beside or over the video, 7TV emotes, filters (hide bots / !commands, calm busy chats)
+- **Multi-view**: watch 2–4 live channels at once (☰ → Multi-view); the focused one plays sound
+- **Picture-in-picture**: Home while watching keeps the stream in a corner (on TVs that support it)
+- **Go-live alerts**: a notice when someone you follow goes live while the app is open (▶❚❚ to watch)
+- **TV home screen** (Android TV / Google TV): a "Live on Kick" row and past broadcasts in Play Next
 - **Sign in**: scan a QR code and log in on your phone, or use the remote's on-screen pointer
 - Remote: ☰ opens player settings / on a card opens the channel page
 

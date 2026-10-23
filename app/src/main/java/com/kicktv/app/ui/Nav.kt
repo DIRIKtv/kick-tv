@@ -6,6 +6,7 @@ import android.view.View
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.kicktv.app.data.Clip
 import com.kicktv.app.data.Video
 import com.kicktv.app.player.PlayerActivity
 
@@ -21,6 +22,24 @@ object Nav {
                 .putExtra(PlayerActivity.EXTRA_VOD_URL, video.source)
                 .putExtra(PlayerActivity.EXTRA_VOD_UUID, video.uuid)
                 .putExtra(PlayerActivity.EXTRA_VOD_TITLE, video.title)
+                .putExtra(PlayerActivity.EXTRA_VOD_THUMB, video.thumbnail)
+                .putExtra(PlayerActivity.EXTRA_VOD_DURATION, video.durationMs)
+                .putExtra(PlayerActivity.EXTRA_VOD_DATE, video.createdAt)
+                .putExtra(PlayerActivity.EXTRA_VOD_CATEGORY, video.category)
+        )
+    }
+
+    fun watchClip(ctx: Context, clip: Clip) {
+        ctx.startActivity(
+            Intent(ctx, PlayerActivity::class.java)
+                .putExtra(PlayerActivity.EXTRA_SLUG, clip.channelSlug)
+                .putExtra(PlayerActivity.EXTRA_VOD_URL, clip.source)
+                .putExtra(PlayerActivity.EXTRA_CLIP_ID, clip.id)
+                .putExtra(PlayerActivity.EXTRA_VOD_TITLE, clip.title)
+                .putExtra(PlayerActivity.EXTRA_VOD_THUMB, clip.thumbnail)
+                .putExtra(PlayerActivity.EXTRA_VOD_DURATION, clip.durationMs)
+                .putExtra(PlayerActivity.EXTRA_VOD_DATE, clip.createdAt)
+                .putExtra(PlayerActivity.EXTRA_VOD_CATEGORY, clip.category)
         )
     }
 
@@ -43,6 +62,7 @@ object Nav {
             is GridItem.Channel -> if (item.isLive) watchLive(ctx, item.slug) else channel(ctx, item.slug)
             is GridItem.Cat -> category(ctx, item.category.id, item.category.name)
             is GridItem.Vod -> watchVod(ctx, item.channelSlug, item.video)
+            is GridItem.Clip -> watchClip(ctx, item.clip)
             is GridItem.Header -> Unit
         }
     }
@@ -51,6 +71,8 @@ object Nav {
         when (item) {
             is GridItem.Stream -> channel(ctx, item.stream.slug)
             is GridItem.Channel -> channel(ctx, item.slug)
+            is GridItem.Clip -> channel(ctx, item.clip.channelSlug)
+            is GridItem.Vod -> channel(ctx, item.channelSlug)
             else -> onCardClick(ctx, item)
         }
     }

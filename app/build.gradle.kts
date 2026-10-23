@@ -10,8 +10,8 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
-val appVersionName = "1.1.0"
-val appVersionCode = 10100
+val appVersionName = "1.2.0"
+val appVersionCode = 10200
 
 android {
     namespace = "com.kicktv.app"
@@ -88,6 +88,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil:3.4.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.4.0")
     implementation("com.google.zxing:core:3.5.3")
+
+    testImplementation("junit:junit:4.13.2")
 }
 
 // ./gradlew dist  ->  dist/KickTV-<version>.apk, ready to sideload.

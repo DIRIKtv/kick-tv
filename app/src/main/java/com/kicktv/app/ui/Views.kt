@@ -196,10 +196,12 @@ object Fmt {
         return time(System.currentTimeMillis() - t)
     }
 
-    fun ago(date: String?): String {
-        val t = parseUtc(date) ?: return ""
+    fun ago(date: String?): String = parseUtc(date)?.let { ago(it) } ?: ""
+
+    fun ago(t: Long): String {
         val mins = (System.currentTimeMillis() - t) / 60000
         return when {
+            mins < 1 -> "just now"
             mins < 60 -> "${mins}m ago"
             mins < 60 * 24 -> "${mins / 60}h ago"
             mins < 60 * 24 * 30 -> "${mins / (60 * 24)}d ago"

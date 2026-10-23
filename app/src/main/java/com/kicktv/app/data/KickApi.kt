@@ -2,15 +2,20 @@ package com.kicktv.app.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 /** Thin client over Kick's public web endpoints. */
@@ -25,6 +30,24 @@ object KickApi {
     /** Set when signed in; added to kick.com API calls. */
     @Volatile var authToken: String? = null
 
+    /** At most this many kick.com API calls in flight; bursts (one lookup per follow) got rate limited. */
+    private val apiSlots = Semaphore(6)
+
+    /** After a 429, every API call waits until this time. */
+    @Volatile private var coolDownUntil = 0L
+
+    private fun isApi(url: HttpUrl) =
+        (url.host == "kick.com" || url.host.endsWith(".kick.com")) && url.encodedPath.startsWith("/api/")
+
+    /**
+     * Calls that act for the signed-in account. Everything else goes out without the token, so
+     * Cloudflare can answer from its cache and the calls don't count against the account's limit.
+     */
+    private fun needsAuth(url: HttpUrl): Boolean {
+        val path = url.encodedPath
+        return path.startsWith("/api/v2/channels/followed") || path.endsWith("/follow") || path == "/api/v1/user"
+    }
+
     val http: OkHttpClient = OkHttpClient.Builder()
         // Images and playlists come from a few hosts; the default of 5 per host queues thumbnails.
         .dispatcher(okhttp3.Dispatcher().apply { maxRequests = 64; maxRequestsPerHost = 16 })
@@ -34,18 +57,44 @@ object KickApi {
         .addInterceptor { chain ->
             val req = chain.request()
             val b = req.newBuilder().header("User-Agent", USER_AGENT)
-            if (req.url.host.endsWith("kick.com") && req.url.encodedPath.startsWith("/api/")) {
-                if (req.header("Accept") == null) b.header("Accept", "application/json")
+            if (!isApi(req.url)) return@addInterceptor chain.proceed(b.build())
+            if (req.header("Accept") == null) b.header("Accept", "application/json")
+            if (needsAuth(req.url)) {
                 authToken?.let { if (req.header("Authorization") == null) b.header("Authorization", "Bearer $it") }
             }
-            chain.proceed(b.build())
+            throttled(chain, b.build())
         }
         .build()
+
+    /** Runs an API call inside the concurrency limit, waiting out and retrying 429s a couple of times. */
+    private fun throttled(chain: Interceptor.Chain, req: Request): Response {
+        apiSlots.acquire()
+        try {
+            var attempt = 0
+            while (true) {
+                val wait = coolDownUntil - System.currentTimeMillis()
+                if (wait > 0) Thread.sleep(wait)
+                val resp = chain.proceed(req)
+                if (resp.code != 429 || attempt >= 2) return resp
+                val retryAfter = resp.header("Retry-After")?.trim()?.toLongOrNull()?.times(1000) ?: (2000L shl attempt)
+                resp.close()
+                coolDownUntil = maxOf(coolDownUntil, System.currentTimeMillis() + retryAfter.coerceIn(1000, 15_000))
+                attempt++
+            }
+        } finally {
+            apiSlots.release()
+        }
+    }
+
+    private fun httpError(resp: Response) = IOException(
+        if (resp.code == 429) "Kick is limiting requests right now. Try again in a minute."
+        else "HTTP ${resp.code} for ${resp.request.url.encodedPath}"
+    )
 
     private suspend fun get(url: String): String = withContext(Dispatchers.IO) {
         http.newCall(Request.Builder().url(url).build()).execute().use { resp ->
             val body = resp.body?.string().orEmpty()
-            if (!resp.isSuccessful) throw IOException("HTTP ${resp.code} for ${resp.request.url.encodedPath}")
+            if (!resp.isSuccessful) throw httpError(resp)
             body
         }
     }
@@ -54,10 +103,14 @@ object KickApi {
         val body = json.toString().toRequestBody("application/json".toMediaType())
         http.newCall(Request.Builder().url(url).method(method, body).build()).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
-            if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}")
+            if (!resp.isSuccessful) throw httpError(resp)
             text
         }
     }
+
+    private class Cached<T>(val at: Long, val value: T)
+    private val channelCache = ConcurrentHashMap<String, Cached<ChannelInfo>>()
+    private val liveCache = ConcurrentHashMap<String, Cached<LiveStream?>>()
 
     /** Live streams sorted by viewers. [language] null means all languages. */
     suspend fun livestreams(
@@ -114,13 +167,21 @@ object KickApi {
         return Page(items, next)
     }
 
-    suspend fun channel(slug: String): ChannelInfo {
-        val o = JSONObject(get("https://kick.com/api/v2/channels/${slug.lowercase()}"))
+    /** Channel details, reusing a lookup from the last [maxAgeMs] (several screens ask for the same ones). */
+    suspend fun channel(slug: String, maxAgeMs: Long = 20_000): ChannelInfo {
+        val key = slug.lowercase()
+        channelCache[key]?.let { if (System.currentTimeMillis() - it.at < maxAgeMs) return it.value }
+        return fetchChannel(key).also { channelCache[key] = Cached(System.currentTimeMillis(), it) }
+    }
+
+    private suspend fun fetchChannel(slug: String): ChannelInfo {
+        val o = JSONObject(get("https://kick.com/api/v2/channels/$slug"))
         val user = o.optJSONObject("user") ?: JSONObject()
         val live = o.optJSONObject("livestream")
         val liveCats = live?.optJSONArray("categories")
         return ChannelInfo(
             id = o.optInt("id"),
+            userId = o.optInt("user_id", user.optInt("id")),
             slug = o.optString("slug"),
             username = user.optString("username", o.optString("slug")),
             bio = user.optStringOrNull("bio"),
@@ -147,15 +208,61 @@ object KickApi {
         )
     }
 
-    /** Channel info plus a usable live thumbnail (the one in [channel] is often forbidden). */
-    suspend fun channelForCard(slug: String): ChannelInfo {
-        val c = channel(slug)
-        if (!c.isLive) return c
-        val thumb = runCatching {
-            JSONObject(get("https://kick.com/api/v2/channels/${slug.lowercase()}/livestream"))
-                .optJSONObject("data")?.optJSONObject("thumbnail")?.optStringOrNull("src")
-        }.getOrNull()
-        return if (thumb != null) c.copy(liveThumbnail = thumb) else c
+    /**
+     * The channel's current broadcast as a card, or null when it's offline. One small call per
+     * channel (vs. [channel]), with the name and avatar the caller already has.
+     */
+    suspend fun liveStream(slug: String, username: String, avatar: String?, maxAgeMs: Long = 45_000): LiveStream? {
+        val key = slug.lowercase()
+        liveCache[key]?.let { if (System.currentTimeMillis() - it.at < maxAgeMs) return it.value }
+        val o = JSONObject(get("https://kick.com/api/v2/channels/$key/livestream")).optJSONObject("data")
+        val live = o?.let {
+            LiveStream(
+                slug = slug,
+                username = username,
+                title = it.optString("session_title"),
+                viewers = it.optInt("viewers"),
+                thumbnail = it.optJSONObject("thumbnail")?.optStringOrNull("src"),
+                avatar = avatar,
+                category = it.optJSONObject("category")?.optStringOrNull("name"),
+                language = it.optStringOrNull("language"),
+                startTime = it.optStringOrNull("created_at"),
+            )
+        }
+        liveCache[key] = Cached(System.currentTimeMillis(), live)
+        return live
+    }
+
+    /** Most-viewed clips, site-wide or for one channel. [time] is day, week, month or all. */
+    suspend fun clips(slug: String? = null, cursor: String? = null, time: String = "day"): Page<Clip> {
+        val base = if (slug == null) "https://kick.com/api/v2/clips" else "https://kick.com/api/v2/channels/${slug.lowercase()}/clips"
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("sort", "view")
+            .addQueryParameter("time", time)
+            .apply { cursor?.let { addQueryParameter("cursor", it) } }
+            .build().toString()
+        val json = JSONObject(get(url))
+        val arr = json.optJSONArray("clips") ?: JSONArray()
+        val items = (0 until arr.length()).mapNotNull { i ->
+            val o = arr.getJSONObject(i)
+            val src = o.optStringOrNull("video_url") ?: o.optStringOrNull("clip_url") ?: return@mapNotNull null
+            val ch = o.optJSONObject("channel") ?: JSONObject()
+            Clip(
+                id = o.optString("id"),
+                title = o.optString("title"),
+                source = src,
+                thumbnail = o.optStringOrNull("thumbnail_url"),
+                durationMs = o.optLong("duration") * 1000,
+                views = o.optInt("view_count", o.optInt("views")),
+                createdAt = o.optStringOrNull("created_at"),
+                category = o.optJSONObject("category")?.optStringOrNull("name"),
+                channelSlug = ch.optString("slug"),
+                channelName = ch.optString("username", ch.optString("slug")),
+                channelAvatar = ch.optStringOrNull("profile_picture"),
+            )
+        }.filter { it.channelSlug.isNotEmpty() }
+        val next = json.optStringOrNull("nextCursor")
+        return Page(items, if (items.isEmpty() || next == cursor) null else next)
     }
 
     suspend fun videos(slug: String): List<Video> {
@@ -231,7 +338,8 @@ object KickApi {
                     ?: user?.optStringOrNull("username") ?: slug
                 val avatar = o.optStringOrNull("profile_picture") ?: o.optStringOrNull("profile_pic")
                     ?: user?.optStringOrNull("profile_pic")
-                out[slug.lowercase()] = Favorite(slug, name, avatar)
+                val live = if (o.has("is_live")) o.optBoolean("is_live") else null
+                out[slug.lowercase()] = Favorite(slug, name, avatar, live)
             }
             val next = (root as? JSONObject)?.let { it.optStringOrNull("nextCursor") ?: it.optStringOrNull("next_cursor") }
             cursor = if (arr.length() == 0 || next == cursor) null else next

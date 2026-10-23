@@ -11,6 +11,8 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import com.kicktv.app.data.Follows
 import com.kicktv.app.data.KickApi
+import com.kicktv.app.tv.TvHome
+import com.kicktv.app.ui.LiveAlerts
 
 class KickApp : Application(), SingletonImageLoader.Factory {
     companion object {
@@ -30,6 +32,8 @@ class KickApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         Follows.init(this)
+        LiveAlerts.init(this)
+        TvHome.schedule(this)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =

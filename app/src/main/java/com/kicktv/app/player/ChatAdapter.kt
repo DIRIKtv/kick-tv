@@ -44,6 +44,12 @@ class ChatAdapter(private val context: Context, var textSizeSp: Int) : RecyclerV
         "sub_gifter" to R.drawable.badge_sub_gifter,
     )
 
+    private val wordRegex = Regex("""\S+""")
+
+    /** 7TV emotes (name -> image URL); words matching one are drawn as the emote. */
+    var thirdPartyEmotes: Map<String, String> = emptyMap()
+        set(value) { field = value; refreshVisible() }
+
     /** The channel's own subscriber badges (months -> image), set once channel info loads. */
     var subscriberBadges: List<Pair<Int, String>> = emptyList()
         set(value) { field = value; refreshVisible() }
@@ -118,14 +124,30 @@ class ChatAdapter(private val context: Context, var textSizeSp: Int) : RecyclerV
         var last = 0
         val size = (lineHeight * 1.25f).toInt().coerceAtLeast(24)
         for (match in emoteRegex.findAll(m.content)) {
-            sb.append(m.content, last, match.range.first)
+            appendText(sb, m.content.substring(last, match.range.first), size)
             val name = match.groupValues[2]
             val d = remoteImage("https://files.kick.com/emotes/${match.groupValues[1]}/fullsize")
             if (d != null) appendImage(sb, d, size, name) else sb.append(name)
             last = match.range.last + 1
         }
-        sb.append(m.content, last, m.content.length)
+        appendText(sb, m.content.substring(last), size)
         return sb
+    }
+
+    /** Plain message text, with any 7TV emote names swapped for their images. */
+    private fun appendText(sb: SpannableStringBuilder, text: String, size: Int) {
+        if (thirdPartyEmotes.isEmpty()) {
+            sb.append(text)
+            return
+        }
+        var last = 0
+        for (word in wordRegex.findAll(text)) {
+            sb.append(text, last, word.range.first)
+            val d = thirdPartyEmotes[word.value]?.let { remoteImage(it) }
+            if (d != null) appendImage(sb, d, size, word.value) else sb.append(word.value)
+            last = word.range.last + 1
+        }
+        sb.append(text, last, text.length)
     }
 
     /** Adds [drawable] scaled to [height] and centered on the text line; [alt] is the hidden text. */

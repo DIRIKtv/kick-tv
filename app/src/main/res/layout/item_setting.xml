@@ -62,6 +62,14 @@
         android:textColor="@color/on_focus_accent"
         android:textSize="13sp" />
 
+    <com.kicktv.app.ui.LiquidToggle
+        android:id="@+id/toggle"
+        android:layout_width="46dp"
+        android:layout_height="26dp"
+        android:layout_marginStart="12dp"
+        android:duplicateParentState="true"
+        android:visibility="gone" />
+
     <ImageView
         android:id="@+id/chevron"
         android:layout_width="20dp"

@@ -128,50 +128,112 @@ class PairingServer(
                 .firstOrNull { it.isSiteLocalAddress }?.hostAddress
         }.getOrNull()
 
+        // The fields float their label into the outline (Bencho's label input), the button folds
+        // into a slim bar while the TV works and opens back out as "Signed in" (pay button), and
+        // in-progress status lines carry a sweeping shimmer (shimmer text).
         private val PAGE = """
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kick TV sign in</title>
 <style>
-:root{--g:#53FC18;--bg:#0B0E0F;--s:#16191C;--s2:#24272C;--t:#EFEFF1;--t2:#A9ADB4}
+:root{--g:#53FC18;--bg:#0B0E0F;--s:#16191C;--s2:#24272C;--t:#EFEFF1;--t2:#A9ADB4;--t3:#71767E;--e:#3A3E45}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:28px 20px}
 .wrap{max-width:420px;margin:0 auto}.logo{color:var(--g);font-weight:900;font-size:34px;letter-spacing:.5px}
 h1{font-size:22px;margin:18px 0 4px}p{color:var(--t2);margin:0 0 20px}
-label{display:block;font-size:13px;color:var(--t2);margin:14px 0 6px}
-input{width:100%;padding:14px;border-radius:10px;border:1px solid #33373d;background:var(--s);color:var(--t);font-size:17px;outline:none}
-input:focus{border-color:var(--g)}
-button{width:100%;margin-top:22px;padding:15px;border:0;border-radius:10px;background:var(--g);color:#000;font-weight:800;font-size:17px}
-button:disabled{opacity:.5}.card{background:var(--s);border-radius:14px;padding:18px;margin-top:8px}
-.status{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--s2);margin-bottom:18px;font-size:14px}
+.status{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--s2);margin-bottom:6px;font-size:14px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--g);flex:none}.err{background:#3a1416;color:#ff8a8a}.err .dot{background:#ff5252}
-.hide{display:none}.big{font-size:56px;text-align:center;margin:10px 0}.small{font-size:13px;color:var(--t2);margin-top:18px}
+.hide{display:none!important}.small{font-size:13px;color:var(--t2);margin-top:22px}
+/* shimmer: the words dimmed, and a copy on top painted only where a band of ink passes */
+.shm{position:relative;color:var(--t3)}
+.shm::before{content:attr(data-text);position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(90deg,transparent 0,transparent 40%,var(--t) 50%,transparent 60%,transparent 100%);background-size:400% 100%;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:sweep 2s linear infinite}
+@keyframes sweep{from{background-position:100% 0}to{background-position:0 0}}
+/* label input: the label is the placeholder until you are in the field, then lifts into the
+   top edge with a hop along its letters while the outline parts under it from the middle */
+.fld{position:relative;height:54px;margin-top:24px}
+.fld input{position:absolute;inset:0;width:100%;height:100%;padding:0 14px;border:1px solid var(--e);border-radius:14px;background:transparent;color:var(--t);font:inherit;font-size:17px;outline:none;transition:border-color .22s,box-shadow .22s}
+.fld input:focus{border-color:var(--g);box-shadow:inset 0 0 0 .5px var(--g)}
+.fld input:-webkit-autofill{-webkit-text-fill-color:var(--t);transition:background-color 99999s}
+.fld.pw input{padding-right:50px}
+.fld label{position:absolute;left:14px;top:50%;z-index:1;font-size:17px;line-height:1;white-space:pre;color:var(--t3);pointer-events:none;transform-origin:left center;transform:translateY(-50%);transition:transform .42s cubic-bezier(.22,1,.36,1),color .22s}
+.fld label span{display:inline-block}
+.fld input:focus~label,.fld input:not(:placeholder-shown)~label{transform:translateY(-50%) translateY(-27px) scale(.78);color:var(--t2)}
+.fld input:focus~label{color:var(--g)}
+.fld input:focus~label span{animation:hop .46s cubic-bezier(.3,.7,.3,1) both;animation-delay:calc(var(--i)*24ms)}
+.gap{position:absolute;top:-1px;left:9px;height:3px;width:calc(var(--lw,60px)*.78 + 10px);background:var(--bg);transform:scaleX(0);transition:transform .42s cubic-bezier(.22,1,.36,1)}
+.fld input:focus~.gap,.fld input:not(:placeholder-shown)~.gap{transform:scaleX(1)}
+.eye{position:absolute;right:10px;top:50%;width:34px;height:34px;margin-top:-17px;display:grid;place-items:center;padding:0;border:0;border-radius:999px;background:transparent;color:var(--t3);cursor:pointer;z-index:2}
+.eye svg{grid-area:1/1;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:opacity .22s,transform .22s cubic-bezier(.22,1,.36,1),filter .22s}
+.eye svg+svg,.eye.on svg:first-child{opacity:0;transform:scale(.7);filter:blur(2px)}
+.eye.on svg+svg{opacity:1;transform:none;filter:none}
+.flip{animation:flip .26s ease-out}
+/* pay button: the fields sink into the button, which draws in to a slim bar with a stroke
+   running along it while the TV works, then opens back out a little past "Signed in" */
+.fold{display:grid;grid-template-rows:1fr;transition:grid-template-rows .6s cubic-bezier(.24,1.34,.38,1)}
+.fold-in{min-height:0;overflow:hidden;transition:opacity .42s ease .16s,transform .6s cubic-bezier(.22,1,.36,1) .16s,filter .42s ease .16s}
+.pay:not([data-phase=idle]) .fold{grid-template-rows:0fr;transition:grid-template-rows .6s cubic-bezier(.22,1,.36,1)}
+.pay:not([data-phase=idle]) .fold-in{opacity:0;transform:translateY(18px) scale(.86);filter:blur(4px);transition:opacity .22s,transform .42s cubic-bezier(.22,1,.36,1),filter .22s}
+.go{position:relative;display:block;width:100%;height:52px;margin:26px auto 0;padding:0;border:0;border-radius:999px;background:var(--g);color:#000;font:inherit;font-weight:800;font-size:17px;overflow:hidden;cursor:pointer;transition:width .6s cubic-bezier(.22,1,.36,1),transform .16s cubic-bezier(.22,1,.36,1);-webkit-tap-highlight-color:transparent}
+.go:active{transform:scale(.96)}
+.pay[data-phase=busy] .go{width:104px;cursor:progress}
+.pay[data-phase=done] .go{transition:width .6s cubic-bezier(.24,1.34,.38,1)}
+.l{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;white-space:nowrap;opacity:0;filter:blur(3px);transition:opacity .16s,filter .16s}
+.pay[data-phase=idle] .l-idle,.pay[data-phase=busy] .l-busy,.pay[data-phase=done] .l-done{opacity:1;filter:none;transition:opacity .22s .22s,filter .22s .22s}
+.run{stroke-dasharray:.3 1;stroke-dashoffset:.3}
+.pay[data-phase=busy] .run{animation:run 1.1s cubic-bezier(.45,0,.35,1) infinite}
+.chk path{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .16s}
+.pay[data-phase=done] .chk path{stroke-dashoffset:0;transition:stroke-dashoffset .42s cubic-bezier(.22,1,.36,1) .42s}
+@keyframes hop{0%{transform:translateY(0)}38%{transform:translateY(-3px)}100%{transform:translateY(0)}}
+@keyframes flip{from{filter:blur(3px);opacity:.5}}
+@keyframes run{from{stroke-dashoffset:.3}to{stroke-dashoffset:-1}}
+@media (prefers-reduced-motion:reduce){.shm::before,.fld input:focus~label span,.pay[data-phase=busy] .run{animation:none}.fld label,.gap,.go,.fold{transition-duration:.16s}}
 </style></head><body><div class="wrap">
 <div class="logo">KICK</div>
-<div id="v-form"><h1>Sign in on your TV</h1><p>Type your Kick login here and your TV signs in.</p>
- <div id="st" class="status"><span class="dot"></span><span id="stt">Connecting to your TV…</span></div>
- <form id="f"><label>Email or username</label><input id="u" autocomplete="username" autocapitalize="none" required>
- <label>Password</label><input id="p" type="password" autocomplete="current-password" required>
- <button id="b">Sign in on TV</button></form>
- <div class="small">Your login goes straight from this page to your TV over your home network, and from the TV to kick.com.</div></div>
-<div id="v-code" class="hide"><h1>Check your email</h1><p id="codemsg">Kick sent you a verification code. Enter it here.</p>
- <form id="cf"><input id="c" inputmode="numeric" autocomplete="one-time-code" placeholder="Code" required><button>Verify</button></form></div>
-<div id="v-wait" class="hide"><h1>Signing in…</h1><p id="waitmsg">Hang on while your TV talks to Kick.</p></div>
-<div id="v-done" class="hide"><div class="big">✓</div><h1 style="text-align:center">You're signed in</h1><p style="text-align:center" id="donemsg"></p></div>
+<div id="v-form"><h1>Sign in on your TV</h1><p>Type your Kick login here and your TV signs in.</p></div>
+<div id="v-code" class="hide"><h1>Check your email</h1><p id="codemsg">Kick sent you a verification code. Enter it here.</p></div>
+<div id="st" class="status"><span class="dot"></span><span id="stt" class="shm" data-text="Connecting to your TV…">Connecting to your TV…</span></div>
+<form id="f" class="pay" data-phase="idle"><div class="fold"><div class="fold-in">
+ <div class="fld"><input id="u" placeholder=" " autocomplete="username" autocapitalize="none" spellcheck="false" required><label for="u">Email or username</label><i class="gap"></i></div>
+ <div class="fld pw"><input id="p" type="password" placeholder=" " autocomplete="current-password" required><label for="p">Password</label><i class="gap"></i>
+  <button type="button" class="eye" id="eye" aria-label="Show password"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg><svg viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg></button></div>
+</div></div><button class="go"><span class="l l-idle">Sign in on TV</span><span class="l l-busy" aria-hidden="true"><svg width="64" height="4" viewBox="0 0 64 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="2" y1="2" x2="62" y2="2" opacity=".28"/><line class="run" x1="2" y1="2" x2="62" y2="2" pathLength="1"/></svg></span><span class="l l-done"><svg class="chk" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" pathLength="1"/></svg>Signed in</span></button></form>
+<form id="cf" class="pay hide" data-phase="idle"><div class="fold"><div class="fold-in">
+ <div class="fld"><input id="c" inputmode="numeric" autocomplete="one-time-code" placeholder=" " required><label for="c">Code</label><i class="gap"></i></div>
+</div></div><button class="go"><span class="l l-idle">Verify</span><span class="l l-busy" aria-hidden="true"><svg width="64" height="4" viewBox="0 0 64 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="2" y1="2" x2="62" y2="2" opacity=".28"/><line class="run" x1="2" y1="2" x2="62" y2="2" pathLength="1"/></svg></span><span class="l l-done"><svg class="chk" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" pathLength="1"/></svg>Signed in</span></button></form>
+<div class="small" id="note">Your login goes straight from this page to your TV over your home network, and from the TV to kick.com.</div>
 </div><script>
-var k=new URLSearchParams(location.search).get('k'),sent=false,view='';
-function show(v){if(v===view)return;view=v;['form','code','wait','done'].forEach(function(n){document.getElementById('v-'+n).classList.toggle('hide',n!==v)});}
-function post(p,d){return fetch(p+'?k='+k,{method:'POST',body:JSON.stringify(d)});}
-document.getElementById('f').onsubmit=function(e){e.preventDefault();sent=true;show('wait');
- post('/login',{user:document.getElementById('u').value,password:document.getElementById('p').value});};
-document.getElementById('cf').onsubmit=function(e){e.preventDefault();show('wait');post('/code',{code:document.getElementById('c').value});document.getElementById('c').value='';};
+var k=new URLSearchParams(location.search).get('k'),view='form',sentAt=0;
+function g(i){return document.getElementById(i)}
+// Each label becomes letters for the hop, and the outline's gap is cut to its width.
+[].forEach.call(document.querySelectorAll('.fld'),function(f){var l=f.querySelector('label'),t=l.textContent;l.textContent='';
+ t.split('').forEach(function(ch,i){var s=document.createElement('span');s.textContent=ch;s.style.setProperty('--i',i);l.appendChild(s);});
+ f.style.setProperty('--lw',l.offsetWidth+'px');});
+g('eye').onpointerdown=function(e){e.preventDefault()};
+g('eye').onclick=function(){var p=g('p'),on=p.type==='password';p.type=on?'text':'password';this.classList.toggle('on',on);
+ this.setAttribute('aria-label',on?'Hide password':'Show password');p.classList.remove('flip');void p.offsetWidth;p.classList.add('flip');};
+function form(){return view==='code'?g('cf'):g('f')}
+function phase(f,p){f.setAttribute('data-phase',p);var b=f.querySelector('.go');
+ b.style.width=p==='done'?(f.querySelector('.l-done').offsetWidth+48)+'px':'';}
+function show(v){if(v===view)return;view=v;g('v-form').classList.toggle('hide',v!=='form');g('f').classList.toggle('hide',v!=='form');
+ g('v-code').classList.toggle('hide',v!=='code');g('cf').classList.toggle('hide',v!=='code');}
+function status(text,state){var st=g('st'),t=g('stt');st.classList.toggle('err',state==='error');st.classList.toggle('hide',state==='done');
+ t.classList.toggle('shm',state==='loading'||state==='working');t.textContent=text;t.setAttribute('data-text',text);}
+// Just after a submit the TV may not have answered yet; don't unfold the form over it.
+function settling(){return Date.now()-sentAt<4000}
+function post(p,d){sentAt=Date.now();return fetch(p+'?k='+k,{method:'POST',body:JSON.stringify(d)});}
+g('f').onsubmit=function(e){e.preventDefault();phase(g('f'),'busy');status('Sending to your TV…','working');
+ post('/login',{user:g('u').value,password:g('p').value});};
+g('cf').onsubmit=function(e){e.preventDefault();phase(g('cf'),'busy');status('Sending the code…','working');
+ post('/code',{code:g('c').value});g('c').value='';};
 function poll(){fetch('/status?k='+k).then(function(r){return r.json()}).then(function(s){
- var st=document.getElementById('st'),t=document.getElementById('stt');
- st.classList.toggle('err',s.state==='error');
- if(s.state==='done'){document.getElementById('donemsg').textContent=s.message||'';show('done');return;}
- if(s.state==='code'){if(s.message)document.getElementById('codemsg').textContent=s.message;show('code');}
- else if(s.state==='working'){document.getElementById('waitmsg').textContent=s.message||'Hang on while your TV talks to Kick.';show('wait');}
- else{show('form');t.textContent=s.message||(s.state==='loading'?'Getting kick.com ready on your TV…':'Connected to your TV');}
- setTimeout(poll,1500);}).catch(function(){document.getElementById('stt').textContent='Can\'t reach your TV. Make sure your phone is on the same Wi-Fi.';setTimeout(poll,3000);});}
+ if(s.state==='done'){var h=g(view==='code'?'v-code':'v-form');h.querySelector('h1').textContent="You're signed in";h.querySelector('p').textContent=s.message||'';
+  status('','done');phase(form(),'done');g('note').classList.add('hide');return;}
+ if(s.state==='code'){if(view!=='code'){show('code');phase(g('cf'),'idle');}else if(!settling())phase(g('cf'),'idle');
+  if(s.message)g('codemsg').textContent=s.message;status('Connected to your TV','ready');}
+ else if(s.state==='working'){phase(form(),'busy');status(s.message||'Hang on while your TV talks to Kick.','working');}
+ else if(s.state==='error'){show('form');phase(g('f'),'idle');status(s.message||'Something went wrong. Try again.','error');}
+ else if(!settling()){show('form');phase(g('f'),'idle');
+  status(s.message||(s.state==='loading'?'Getting kick.com ready on your TV…':'Connected to your TV'),s.state);}
+ setTimeout(poll,1500);}).catch(function(){status('Can\'t reach your TV. Make sure your phone is on the same Wi-Fi.','offline');setTimeout(poll,3000);});}
 poll();
 </script></body></html>
 """

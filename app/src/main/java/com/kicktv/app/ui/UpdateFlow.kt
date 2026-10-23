@@ -44,7 +44,7 @@ class UpdateFlow(private val act: FragmentActivity, private val release: Updater
                     OptionSheet.Item("Cancel", icon = R.drawable.ic_close) { it.dismiss() },
                 )
                 apk != null -> installItems()
-                else -> listOf(OptionSheet.Item("Downloading…", value = "$progress%", icon = R.drawable.ic_refresh) {})
+                else -> listOf(OptionSheet.Item("Downloading…", value = "$progress%", icon = R.drawable.ic_refresh, shimmer = true) {})
             }
         })
         act.lifecycleScope.launch {

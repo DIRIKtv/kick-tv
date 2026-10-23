@@ -22,11 +22,10 @@
         android:textColor="@color/text_secondary"
         android:textSize="17sp" />
 
-    <ProgressBar
+    <com.kicktv.app.ui.TraceLoader
         android:id="@+id/progress"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_gravity="center"
-        android:indeterminateTint="@color/kick_green"
         android:visibility="gone" />
 </FrameLayout>

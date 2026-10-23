@@ -1,6 +1,11 @@
 package com.kicktv.app.data
 
 import android.content.Context
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * "Following" = channels the signed-in Kick account follows, plus favorites saved on this TV.
@@ -50,9 +55,43 @@ object Follows {
                 accountSlugs += list.map { it.slug.lowercase() }
             }
         }
+        // Favorites saved on the TV come first, but keep the account's live hint for them.
+        val hints = cached.associateBy({ it.slug.lowercase() }, { it.live })
         val seen = HashSet<String>()
-        return (local + cached).filter { seen.add(it.slug.lowercase()) }
+        return (local + cached)
+            .filter { seen.add(it.slug.lowercase()) }
+            .map { f -> if (f.live == null) f.copy(live = hints[f.slug.lowercase()]) else f }
     }
+
+    private val liveLock = Mutex()
+    private var live: Map<String, LiveStream> = emptyMap()
+    private var liveAt = 0L
+    private var liveVersion = -1
+
+    /**
+     * Followed channels that are live now, most watched first. Screens share one result for up
+     * to [maxAgeMs]; channels the account's follow list reports offline aren't looked up at all.
+     */
+    suspend fun liveNow(context: Context, maxAgeMs: Long = 60_000): List<LiveStream> = liveLock.withLock {
+        if (liveVersion == version && System.currentTimeMillis() - liveAt < maxAgeMs) return@withLock sorted()
+        val favs = all(context).filter { it.live != false }.take(100)
+        val previous = live
+        val results = coroutineScope {
+            favs.map { f ->
+                async { f.slug.lowercase() to runCatching { KickApi.liveStream(f.slug, f.username, f.avatar) } }
+            }.awaitAll()
+        }
+        live = results.mapNotNull { (key, result) ->
+            // A failed lookup keeps the last known state rather than flipping the channel offline.
+            val stream = if (result.isSuccess) result.getOrNull() else previous[key]
+            stream?.let { key to it }
+        }.toMap()
+        liveAt = System.currentTimeMillis()
+        liveVersion = version
+        sorted()
+    }
+
+    private fun sorted() = live.values.sortedByDescending { it.viewers }
 
     fun isFollowing(context: Context, slug: String) =
         Prefs(context).isFavorite(slug) || slug.lowercase() in accountSlugs
@@ -65,8 +104,9 @@ object Follows {
         if (signedIn && KickApi.setFollow(slug, now)) {
             if (now) accountSlugs += slug.lowercase() else accountSlugs -= slug.lowercase()
             invalidate()
-        } else if (!now) {
-            accountSlugs -= slug.lowercase()
+        } else {
+            if (!now) accountSlugs -= slug.lowercase()
+            version++ // the TV's own favorites changed
         }
         return now
     }

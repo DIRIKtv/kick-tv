@@ -29,6 +29,7 @@ class ChannelActivity : FragmentActivity() {
     private lateinit var list: RecyclerView
     private var channel: ChannelInfo? = null
     private var videos: List<Video> = emptyList()
+    private var clips: List<com.kicktv.app.data.Clip> = emptyList()
     private lateinit var vodAdapter: GridAdapter
     private var header: View? = null
 
@@ -55,7 +56,11 @@ class ChannelActivity : FragmentActivity() {
         val span = 4
         list.layoutManager = CenterGridLayoutManager(this, span).apply {
             spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                override fun getSpanSize(position: Int) = if (position == 0 && channel != null) span else 1
+                override fun getSpanSize(position: Int): Int {
+                    val offset = headerAdapter.itemCount
+                    if (position < offset) return span
+                    return if (vodAdapter.items.getOrNull(position - offset) is GridItem.Header) span else 1
+                }
             }
         }
         list.adapter = ConcatAdapter(headerAdapter, vodAdapter)
@@ -73,6 +78,7 @@ class ChannelActivity : FragmentActivity() {
         val slug = intent.getStringExtra(EXTRA_SLUG) ?: return finish()
         lifecycleScope.launch {
             val vids = async { runCatching { KickApi.videos(slug) }.getOrDefault(emptyList()) }
+            val clipsJob = async { runCatching { KickApi.clips(slug, time = "all").items }.getOrDefault(emptyList()) }
             try {
                 channel = KickApi.channel(slug)
             } catch (e: Exception) {
@@ -84,6 +90,7 @@ class ChannelActivity : FragmentActivity() {
             findViewById<ImageView>(R.id.bannerBg).loadThumb(channel?.banner)
             headerAdapter.notifyDataSetChanged()
             videos = vids.await()
+            clips = clipsJob.await()
             submitVideos()
             findViewById<View>(R.id.progress).setVisible(false)
             list.post {
@@ -96,10 +103,15 @@ class ChannelActivity : FragmentActivity() {
 
     private fun submitVideos() {
         val slug = channel?.slug ?: return
-        vodAdapter.submit(videos.map { v ->
+        val items = videos.map<Video, GridItem> { v ->
             val pos = prefs.vodPosition(v.uuid)
             GridItem.Vod(v, slug, if (v.durationMs > 0) pos.toFloat() / v.durationMs else 0f)
-        })
+        }.toMutableList()
+        if (clips.isNotEmpty()) {
+            items += GridItem.Header("Popular clips")
+            items += clips.map { GridItem.Clip(it) }
+        }
+        if (vodAdapter.items.size == items.size) vodAdapter.update(items) else vodAdapter.submit(items)
         header?.findViewById<TextView>(R.id.vodHeader)?.text =
             if (videos.isEmpty()) "No past broadcasts" else "Past broadcasts"
     }
