@@ -68,9 +68,6 @@ Sidekick checks this page for a new version each time it opens and offers to ins
 (Settings → Automatic updates: every open, once a day, or off). The first time, Android asks you to
 allow Sidekick to install apps. Your settings and sign-in are kept.
 
-> **Coming from "Kick TV"?** Sidekick is a new app ID, so it installs alongside the old app. Sign in
-> again in Sidekick, then uninstall Kick TV.
-
 ## Using it
 
 | Remote | Does |

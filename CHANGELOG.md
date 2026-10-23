@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Phone sign-in: the "Code" label no longer overlaps the field border on the verification step
+- Phone sign-in page shows the Sidekick name
+
 ## 1.3.0: Sidekick
 
 The app is now **Sidekick**: a new name, logo and app ID. It installs alongside the old "Kick TV" app.
