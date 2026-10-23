@@ -13,6 +13,9 @@ section=$(awk -v v="$version" '
   found { print }
 ' CHANGELOG.md | sed -e '/./,$!d')   # drop leading blank lines
 [ -n "$section" ] || { echo "No \"## $version\" section in CHANGELOG.md" >&2; exit 1; }
+# Release pages can't resolve repo paths, so point the section icons at their copies on GitHub.
+icons="https://raw.githubusercontent.com/$repo/main/docs/icons"
+section=${section//src=\"docs\/icons\//src=\"$icons\/}
 
 # The previous release, for the "all changes" link.
 prev=$( (git tag -l 'v*'; echo "v$version") | sort -uV | grep -B1 -x "v$version" | grep -vx "v$version" || true)
@@ -22,7 +25,7 @@ $section
 
 ---
 
-### Install or update
+### <img src="$icons/install.png" width="20" height="20" align="top"> Install or update
 
 **Already have Sidekick?** It offers this update the next time you open it, or go to **Settings → Check for updates**.
 
