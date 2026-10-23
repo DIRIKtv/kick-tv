@@ -25,7 +25,7 @@ $section
 
 ---
 
-### <img src="$icons/install.png" width="20" height="20" align="top"> Install or update
+### <img src="$icons/install.png" width="20" height="22" align="top"> Install or update
 
 **Already have Sidekick?** It offers this update the next time you open it, or go to **Settings → Check for updates**.
 
