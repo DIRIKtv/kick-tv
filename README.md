@@ -112,7 +112,7 @@ Requirements: JDK 21, Android SDK 36.
 <details>
 <summary>Releasing (maintainer)</summary>
 
-Release builds are signed with `keystore/kicktv-release.jks`, configured by `keystore.properties`
+Release builds are signed with `keystore/sidekick-release.jks`, configured by `keystore.properties`
 (both git-ignored; keep backups — without them, future versions can't install as updates). Without
 `keystore.properties`, release builds fall back to the debug key.
 

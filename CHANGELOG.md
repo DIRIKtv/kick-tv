@@ -5,10 +5,7 @@
 - Phone sign-in: the "Code" label no longer overlaps the field border on the verification step
 - Phone sign-in page shows the Sidekick name
 
-## 1.3.0: Sidekick
-
-The app is now **Sidekick**: a new name, logo and app ID. It installs alongside the old "Kick TV" app.
-Sign in again, then uninstall Kick TV.
+## 1.3.0
 
 - New name, logo, launcher icon and TV banner
 - Fix: after leaving a stream, focus could get stuck on the side menu and bounce back to Home
