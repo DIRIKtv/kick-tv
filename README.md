@@ -118,8 +118,8 @@ Release builds are signed with `keystore/sidekick-release.jks`, configured by `k
 
 1. Bump `appVersionName` and `appVersionCode` at the top of `app/build.gradle.kts`, add the changes
    to [CHANGELOG.md](CHANGELOG.md), and commit.
-2. `scripts/release.sh "One change per line"` lints, builds the signed APK, tags and publishes the
-   GitHub release. Installed apps offer it the next time they're opened.
+2. `scripts/release.sh` lints, builds the signed APK, tags and publishes the GitHub release, with
+   notes built from that CHANGELOG.md section. Installed apps offer it the next time they're opened.
 </details>
 
 ## License

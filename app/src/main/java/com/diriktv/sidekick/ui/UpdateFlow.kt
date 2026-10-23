@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.diriktv.sidekick.R
+import com.diriktv.sidekick.data.ReleaseNotes
 import com.diriktv.sidekick.data.Updater
 import kotlinx.coroutines.launch
 import java.io.File
@@ -27,10 +28,7 @@ class UpdateFlow(private val act: FragmentActivity, private val release: Updater
         })
     }
 
-    private fun notes(): String {
-        val text = release.notes.lines().filter { it.isNotBlank() }.joinToString("\n") { it.trim().removePrefix("- ").let { l -> "• $l" } }
-        return if (text.length > 360) text.take(357) + "…" else text.ifEmpty { "A newer version of Sidekick is ready." }
-    }
+    private fun notes(): String = ReleaseNotes.forTv(release.notes)
 
     private fun sizeLabel() = if (release.sizeBytes > 0) String.format("%.1f MB", release.sizeBytes / 1_048_576f) else null
 
